@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:background="@drawable/home"
+    android:orientation="vertical" >
+
+    <Button
+        android:id="@+id/send"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:text="tcp连接" />
+<!--     <Button
+        android:id="@+id/send"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:text="蓝牙连接" /> -->
+
+    <TextView
+        android:id="@+id/info"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:text="等待服务器端发送回的显示信息..." />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_weight="0.13"
+        android:orientation="vertical" >
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" >
+
+            <Button
+                android:id="@+id/mode"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="打开外出模式" />
+
+            <Button
+                android:id="@+id/button_alarm"
+                android:layout_width="98dp"
+                android:layout_height="wrap_content"
+                android:text="定时事件" />
+
+            <Button
+                android:id="@+id/button_lights"
+                android:layout_width="133dp"
+                android:layout_height="wrap_content"
+                android:text="灯光控制" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" >
+
+            <TextView
+                android:id="@+id/textView1"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:text="电器开关:"
+                android:textAppearance="?android:attr/textAppearanceLarge" />
+        </LinearLayout>
+
+        <Spinner
+            android:id="@+id/wiRingSpin"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.03" >
+
+            <LinearLayout
+                android:layout_width="160dp"
+                android:layout_height="match_parent"
+                android:orientation="vertical" >
+
+                <Button
+                    android:id="@+id/button_gate"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="打开车库大门" />
+
+                <Button
+                    android:id="@+id/out_todo"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="出门备忘" />
+
+                <Button
+                    android:id="@+id/refresh_button"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="刷新状态" />
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="160dp"
+                android:layout_height="match_parent"
+                android:orientation="vertical" >
+
+                <Button
+                    android:id="@+id/button_infrared"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="红外安防" />
+
+                <Button
+                    android:id="@+id/real_time_pic"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="实时图片" />
+
+                <Button
+                    android:id="@+id/test"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="语音识别" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_weight="0.37"
+        android:orientation="vertical" >
+
+        <TextView
+            android:id="@+id/textView2"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="家电状态:"
+            android:textAppearance="?android:attr/textAppearanceLarge" />
+
+<!--         <TextView
+            android:id="@+id/smInfoText1"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="安防已打开"
+            android:textAppearance="?android:attr/textAppearanceSmall" />
+        <TextView
+            android:id="@+id/textView3"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="灯光已关闭"
+            android:textAppearance="?android:attr/textAppearanceSmall" /> -->
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" >
+
+            <EditText
+                android:id="@+id/home_state"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:ems="10"
+                android:inputType="textMultiLine" />
+
+            <Button
+                android:id="@+id/button2"
+                style="?android:attr/buttonStyleSmall"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="清空" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</LinearLayout>
