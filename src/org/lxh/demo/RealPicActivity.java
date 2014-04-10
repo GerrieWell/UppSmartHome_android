@@ -33,11 +33,11 @@ public class RealPicActivity extends Activity {
 			@Override
 			public void onClick(View v) {
 				// TODO Auto-generated method stub
-				Bitmap bitmap=AlarmListenerService.getPicByTCP(AlarmListenerService.client);
+				/*Bitmap bitmap=AlarmListenerService.getPicByTCP(AlarmListenerService.client);
 				if(bitmap!=null){
 					monitor_pic.setImageBitmap(bitmap);
-				}
-				
+				}*/
+				System.out.println("do nothing");
 			}
 		});
 		((Button)findViewById(R.id.previous_pic)).setOnClickListener(new OnClickListener(
@@ -92,7 +92,8 @@ System.out.println("pervious path is :"+path);
 			return;
 		}
 		if(AlarmListenerService.isConnectedTCP()){
-			AlarmListenerService.getPicByTCP(AlarmListenerService.client);
+			//AlarmListenerService.getPicByTCP(AlarmListenerService.client);
+			;
 		}else{
 			MyClientDemo.toastShow(RealPicActivity.this, "未连接");
 		}

@@ -105,14 +105,14 @@ public class VoiceRecognition extends Activity implements OnClickListener {
             		cmd[4]=(byte) 0xff;
             		for(byte i=0;i<2;i++){//MyClientDemo.lightGroupNum
             			cmd[3]=i;
-            			MyClientDemo.sendCmdByTCP(VoiceRecognition.this,cmd,"OK");
+            			//MyClientDemo.sendCmdByTCP(VoiceRecognition.this,cmd,"OK");
             		}
             	}else if(tmp.equals("关灯")){
             		cmd[2]=MyClientDemo.CATE_LIGHT;
             		cmd[4]=0;
             		for(byte i=0;i<MyClientDemo.lightGroupNum;i++){
             			cmd[3]=i;
-            			MyClientDemo.sendCmdByTCP(VoiceRecognition.this,cmd,"OK");
+            			//MyClientDemo.sendCmdByTCP(VoiceRecognition.this,cmd,"OK");
             		}
             	}else if(swbegin||swend){
             		cmd[2]=MyClientDemo.CATE_WIRING;
@@ -127,7 +127,7 @@ public class VoiceRecognition extends Activity implements OnClickListener {
             				return;
             			else{
             				cmd[3]=i;
-            				MyClientDemo.sendCmdByTCP(VoiceRecognition.this,cmd,"OK");
+            				//MyClientDemo.sendCmdByTCP(VoiceRecognition.this,cmd,"OK");
             			}
             		}
             	}else{
