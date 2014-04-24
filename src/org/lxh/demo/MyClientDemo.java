@@ -9,10 +9,13 @@ import android.app.PendingIntent;
 import android.app.TimePickerDialog;
 import android.content.Context;
 import android.content.Intent;
+import android.content.res.ColorStateList;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
+import android.text.AndroidCharacter;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -42,7 +45,7 @@ public class MyClientDemo extends Activity {
 	private Button tcp_connect = null;									// 定义按钮组件
 	private TextView info = null;								// 定义文本组件
 	private Button mode =null,buttonGate=null,buttonAlarm=null,button_lights=null,realPic=null;
-	private EditText smInfoText;
+	private TextView smInfoText;
 	private Spinner wiRingSpin = null,lightGroups=null;
 	private ArrayAdapter<String> adapter,lightAdapter,eventAdapter;
 	public static final String[] wir_str_temp={"电器A","电器B","电器C","电器D","电器E","电器F","点击开关电器"};
@@ -96,7 +99,8 @@ public class MyClientDemo extends Activity {
 		this.buttonAlarm = (Button) super.findViewById(R.id.button_alarm);		// 取得组件
 		this.info = (TextView) super.findViewById(R.id.info);			// 取得组件
 		wiRingSpin=(Spinner)findViewById(R.id.wiRingSpin); 
-		smInfoText=(EditText)findViewById(R.id.home_state);				//将可选内容与ArrayAdapter连接 
+		smInfoText=(TextView)findViewById(R.id.home_state);				//将可选内容与ArrayAdapter连接
+		smInfoText.setTextColor(Color.BLACK);
 		realPic=(Button)findViewById(R.id.real_time_pic);
 		//mp=new monitorPicListener();
 		

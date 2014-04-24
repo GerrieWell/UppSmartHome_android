@@ -3,6 +3,7 @@ package org.lxh.demo;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.Bundle;
@@ -28,6 +29,8 @@ public class RealPicActivity extends Activity {
 		monitor_pic=(ImageView) findViewById(R.id.imageView1);
 		refresh_button=(Button) findViewById(R.id.refresh_button_monitor);
 		//刷新实时图片
+		
+		
 		refresh_button.setOnClickListener(new OnClickListener() {
 			
 			@Override
@@ -97,7 +100,9 @@ System.out.println("pervious path is :"+path);
 		}else{
 			MyClientDemo.toastShow(RealPicActivity.this, "未连接");
 		}
-		
+		Intent i=new Intent(RealPicActivity.this,AlarmListenerService.class);
+		i.setAction(AlarmListenerService.TCP_SERVICE_ACTION_CONNECT);
+		startService(i);
 	}
 	
 /*	public void fill_pic_view(){
