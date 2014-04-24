@@ -7,10 +7,19 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.Iterator;
 
-import zigbee.NwkDesp;
 
+import zigbeeNet.DeviceInfo;
+import zigbeeNet.NodeInfo;
+import zigbeeNet.NwkDesp;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.Message;
 import android.util.Log;
+
+
 
 /**
  * NIO TCP 客户端
@@ -20,6 +29,11 @@ import android.util.Log;
  * @version 1.00
  */
 public class TCPClient {
+	public final static String[] DEVTYPESTR 	= {"无","蓝色","green"};
+	public final static String[] SENSORTYPESTR 	= {"温湿度","人体红外","可然气体"};
+	public final static String[] SENSORSTATUS 	= {"正常","警告"};
+	public final static long SENSORTYPE_WENSHI =0;
+	
 	// 信道选择器
 	private Selector selector;
 
@@ -32,10 +46,15 @@ public class TCPClient {
 	// 要连接的远程服务器在监听的端口
 	private int hostListenningPort;
 	
+	private Handler UIhandler;
+	
 	public boolean reading = false;
 	public boolean FLAG_READ_COMPLETE = false;
 
 	private byte[] rx;
+	
+	/*below is zigbee stuff*/
+	public long coorstate;
 	/**
 	 * 构造函数
 	 * 
@@ -43,10 +62,10 @@ public class TCPClient {
 	 * @param HostListenningPort
 	 * @throws IOException
 	 */
-	public TCPClient(String HostIp, int HostListenningPort) throws IOException {
+	public TCPClient(String HostIp, int HostListenningPort,Handler handler) throws IOException {
 		this.hostIp = HostIp;
 		this.hostListenningPort = HostListenningPort;
-
+		this.UIhandler = handler;
 		initialize();
 		//rx = new byte[1024];
 	}
@@ -68,8 +87,10 @@ public class TCPClient {
 
 		// 启动读取线程
 		new TCPClientReadThread(selector);
+		new TCPClientWriteThread(this);
+		
 	}
-
+	
 	/**
 	 * 发送字符串到服务器
 	 * 
@@ -88,24 +109,7 @@ public class TCPClient {
 				.wrap(tx);
 		socketChannel.write(writeBuffer);
 	}
-	/**
-	 * 
-	 * @param txLong need init
-	 * @throws IOException 
-	 */
-	public void writeLong(long[] txLong) throws IOException{
-		byte tx[],tmp[];
-		long rxArr[] = new long[256];
-		//String rxStrBuf = null;
-		tmp = new byte[4];
-		tx  = new byte[txLong.length*4];
-		MyClientDemo.getLineNumber(new Exception());
-		for(int i = 0 ; i < txLong.length;i++){
-			tmp = HelpUtils.longToBytes(txLong[i]);
-			System.arraycopy(tmp, 0, tx, i*4, 4);
-		}
-		this.write(tx, 0, tx.length);
-	}
+
 	
 	public boolean readBlockWithTime(byte[]rxDest,int sec) throws InterruptedException{
 		FLAG_READ_COMPLETE = false;
@@ -150,19 +154,109 @@ public class TCPClient {
 		return !socketChannel.isOpen();
 	}
 
-	public static void main(String[] args) throws IOException {
-		TCPClient client = new TCPClient("192.168.0.1", 1978);
-
-		client.sendMsg("你好!Nio!醉里挑灯看剑,梦回吹角连营");
+	static int irda_warn_flag=0,irda_warn_flag_temp=0;
+	static int int_warn_flag=0,int_warn_flag_temp=0;
+	static int smog_warn_flag=0,smog_warn_flag_temp=0;
+	
+	public final static long CLIENT_COMMAND_SETSENSOR 	= 0x03;
+	public final static long CLIENT_COMMAND_GETNWKINFO 	= 0x01;
+	public final static long CLIENT_COMMAND_GETTOPO		= 0x02;
+	public final static long CLIENT_COMMAND_GETRFID		= 0x04;
+	public final static long CLIENT_COMMAND_CLEARINT	= 0x08;
+	
+	public final static long CLIENT_COMMAND_ALARM_TOGGLE_ON = 0x100;
+/*	public boolean Client_GetTempHum( ){
+		long tmp[] = {0x15,0x05,0x0a};
+		try {
+			writeLong(tmp);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return false;
+	}*/
+	
+	public boolean Client_Send(long command){
+        Message childMsg = mSendHandler.obtainMessage();
+        //childMsg.obj = mSendHandler.getLooper().getThread().getName() + " says Hello";
+        childMsg.obj = command;
+        mSendHandler.sendMessage(childMsg);
+         
+        //Log.i(TAG, "Send a message to the child thread - " + (String)childMsg.obj);
+        return false;
+	}
+	Handler mSendHandler;
+	public class TCPClientWriteThread implements Runnable{
+		protected static final int CLINET_COMMAND_CATE_SYSTEM = 0x100;
+		TCPClient clientInner;
+		boolean alarmToggle = false;
+		public TCPClientWriteThread(TCPClient c){
+			clientInner = c;
+			new Thread(this).start();
+		}
+		@Override
+		public void run() {
+			Looper.prepare();
+			mSendHandler = new Handler(){
+	            public void handleMessage(Message msg) {
+	            	/* 使用两个参数传递 */
+	            	if(msg.arg1 == CLINET_COMMAND_CATE_SYSTEM){
+	            		boolean toggle = (msg.arg2 !=0);
+	            		alarmToggle = toggle;
+	            		return;
+	            	}
+	            	long command = ((Long) msg.obj).longValue();
+	        		long tmp[] = {0x15,command,0x0a};
+	        		long addr = 0,state = 0;
+	        		if(command == CLIENT_COMMAND_SETSENSOR){
+	        			addr = msg.arg1;
+	        			state = msg.arg2;
+	        			tmp = new long[]{ 0x15,0x03,addr,state,0x0a};
+	        		}
+	        		try {
+	        			writeLong(tmp);
+	        		} catch (IOException e) {
+	        			e.printStackTrace();
+	        		}
+	            }
+	        	public void writeLong(long[] txLong) throws IOException{
+	        		byte tx[],tmp[];
+	        		long rxArr[] = new long[256];
+	        		//String rxStrBuf = null;
+	        		tmp = new byte[4];
+	        		tx  = new byte[txLong.length*4];
+	        		MyClientDemo.getLineNumber(new Exception());
+	        		System.out.println("txLong :" + txLong.length);
+	        		for(int i = 0 ; i < txLong.length;i++){
+	        			tmp = HelpUtils.longToBytes(txLong[i]);
+	        			System.arraycopy(tmp, 0, tx, i*4, 4);
+	        		}
+	        		clientInner.write(tx, 0, tx.length);
+	        	}
+			};
+			 Looper.loop();
+			 while(true){
+				try {
+					TCPClient.this.Client_Send(TCPClient.CLIENT_COMMAND_GETNWKINFO);
+					TCPClient.this.Client_Send(CLIENT_COMMAND_CLEARINT);
+					Thread.sleep(1000);
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			 }
+		}
+		
 	}
 	
 	public class TCPClientReadThread implements Runnable {
 		private Selector selector;
 		private byte[] rxTmp = new byte[4];
 		private long [] rxLongs = null;
+		private NwkDesp pNwkDesp2;
 		public TCPClientReadThread(Selector selector) {
 			this.selector = selector;
-
+			this.pNwkDesp2 = new NwkDesp();
 			new Thread(this).start();
 		}
 
@@ -183,27 +277,27 @@ public class TCPClient {
 							buffer.flip();
 
 							// 将字节转化为为UTF-16的字符串
-							String receivedString = Charset.forName("US-ASCII")
-									.newDecoder().decode(buffer).toString();
+							//String receivedString = Charset.forName("US-ASCII")
+							//		.newDecoder().decode(buffer).toString();
 							
 							rx = buffer.array();
 							System.out.println("client # len :"+ buffer.arrayOffset() +" rx "+ rx.length);
-							int len = buffer.getInt(0);
 							buffer.position();
-							System.out.println("int :"+ len+ "position :" + buffer.position()+"limit:"+buffer.limit());
-							System.out.println("getint : "+ buffer.getInt());
-							rxLongs = new long[buffer.limit()];
-							for(int i=0;i<buffer.limit()/4;i++){/*
+							System.out.println( "position :" + buffer.position()+"limit:"+buffer.limit());
+							rxLongs = new long[buffer.limit()/4];
+							for(int i=0;i<buffer.limit()/4;i++){
 								System.arraycopy(rx, i*4, rxTmp, 0, 4);
 								rxLongs[i] = HelpUtils.StrToLong(rxTmp); 
-								System.out.println("long rx :" + rxLongs[i]);*/
-								rxLongs[i] = buffer.getLong(i);
+								//rxLongs[i] = buffer.getLong(i);
+								System.out.println("long rx :" + rxLongs[i] + "\ti = "+ i);
 							}
-							clientHandleRecvLongs(rxLongs);
 							// 控制台打印出来
-							System.out.println("接收到来自服务器"
+/*							System.out.println("接收到来自服务器"
 									+ sc.socket().getRemoteSocketAddress()
-									+ "的信息:" + receivedString);
+									+ "的信息:" + receivedString);*/
+							
+							clientHandleRecvLongs(rxLongs);
+
 
 							// 为下一次读取作准备
 							sk.interestOps(SelectionKey.OP_READ);
@@ -229,53 +323,37 @@ public class TCPClient {
             {
                 temp=(int)rxLong[1];
                 //count=i+1;
+                System.arraycopy(rxLong, 2, rxLong, 0, rxLong.length -2);
                 switch(temp)
                 {
                 case 0x01:
-
+/**
+ * 注意：Cliect_ZigBeeNwkTopo_Process(&buffer[2],count);  从后两个字节开始
+ * */
                         //printf("COMMAND:-------TOPOINFO--------:\n");
-                        //Cliect_ZigBeeNwkTopo_Process(rxLong);
-
+                		Cliect_ZigBeeNwkTopo_Process(rxLong);
                         break;
                 case 0x02:
-
                         //printf("COMMAND:-------GetZigBeeNwkInfo--------:\n");
-                        //Cliect_ZigBeeNwkInfo_Process(rxLong);
-                	NwkDesp pNwkDesp2 = new NwkDesp();
-                    pNwkDesp2.panid=rxLong[0];
-                    pNwkDesp2.channel=rxLong[1];
-                    //qDebug("pNwkDesp2.channel=%ld\n",pNwkDesp2.channel);
-                    //qDebug("pNwkDesp2->channel=%d %d\n",*(nwkinfo+2),(*(nwkinfo+1)));
-                    pNwkDesp2.maxchild=rxLong[2];
-                    pNwkDesp2.maxdepth=rxLong[3];
-                    pNwkDesp2.maxrouter=rxLong[4];
-                    ZigbeeStuff.pNwkDesp2 = pNwkDesp2;
+                        Cliect_ZigBeeNwkInfo_Process(rxLong);
                         break;
-
                 case 0x04:
-
                         //printf("COMMAND:-------GetRfidId--------:\n");
                         //Cliect_RfidId_Process(rxLong);
                         break;
                 case 0x05:
-
                         //printf("COMMAND:-------GetTempHum--------:\n");
-                        //Cliect_TempHum_Process(rxLong);
+                        Cliect_TempHum_Process(rxLong);
                         break;
                 case 0x06:
-
                         //printf("COMMAND:-------GetSendMsg--------:\n");
                         //Cliect_GPRSSend_Process(buffer[2]);
                         break;
-
                 case 0x07:
-
                         //printf("COMMAND:-------get GPRSSignal--------:\n");
                         //Cliect_GPRSSignal_Process(buffer[2]);
-
                         break;
                 case 0x08:
-                	//Client_CtrlLights_Callback(rxLong);
                 case 0x09:
                 	//Client_GetRealPic(rxLong);//Ready to get Real Pic.
                 default:
@@ -286,13 +364,158 @@ public class TCPClient {
             }
             else
             {
-                printf("other protrol.\n");
+                //printf("other protrol.\n");
             }
+			return false;
+		}
+
+		public final static long STATE_COOR_ONLINE_NOROUTE = 0x02;////for online,but NULL
+		public final static long STATE_COOR_ONLINEWITHROUTE = 0;
+		public final static long STATE_COOR_OFFLINE = 0x01;////for offline
+		
+		public final static long SENSOR_TYPE_SMOG = 0x02;
+		public final static long SENSOR_TYPE_INT  = 0x3;
+		
+		
+		private void Cliect_ZigBeeNwkTopo_Process(long[] node) {
+			// TODO Auto-generated method stub
+			String show ="";
+			int count = node.length;
+			System.out.println("count : "+ count);
+			ArrayList<NodeInfo> nodeInfos = new ArrayList<NodeInfo>();
+			if(count < 5){
+				if(node[0] == STATE_COOR_ONLINE_NOROUTE){
+					coorstate = STATE_COOR_ONLINE_NOROUTE;
+					show = "节点在线无节点";
+				}else if(node[0] == STATE_COOR_OFFLINE){
+					coorstate = STATE_COOR_OFFLINE;
+					show = "节点不在线";
+					System.out.println("节点不在线");
+				}
+			}else{// count > 5   得到链表
+				int i =0;
+				NodeInfo firstNodeInfo =new NodeInfo();
+				DeviceInfo firstDevInfo = new DeviceInfo();
+				firstDevInfo.nwkaddr = node[0];
+				firstDevInfo.macaddr = new long[8];
+				for(int j=0;j<=7;j++)
+					firstDevInfo.macaddr[j] = node[j+1];
+				firstDevInfo.depth = 		node[9];
+				firstDevInfo.devtype = 		node[10];
+				firstDevInfo.parentnwkaddr = node[11];
+				firstDevInfo.sensortype = 	node[12];
+				firstDevInfo.sensorvalue = 	node[13];
+				firstDevInfo.status = 		node[15];
+				firstNodeInfo.row = 		(byte) node[16];
+				firstNodeInfo.num =		    (byte) node[17];
+				System.out.println("get node : "+ firstNodeInfo.num);
+				firstNodeInfo.devinfo	  		= firstDevInfo;
+				nodeInfos.add(firstNodeInfo);//firstNodeInfo.next = null;
+				//为什么要 -3
+				for(i=1;i<(count-3)/18;i++){//2+18  i=
+					NodeInfo newNodeInfo =new NodeInfo();
+					DeviceInfo devInfo = new DeviceInfo();
+					devInfo.nwkaddr = node[18*i];
+					devInfo.macaddr = new long[8];
+					for(int j=0;j<=7;j++)
+						devInfo.macaddr[j] = node[(j+1)+18*i];
+					devInfo.depth = 		node[9+18*i];
+					devInfo.devtype = 		node[10+18*i];
+					devInfo.parentnwkaddr = node[11+18*i];
+					devInfo.sensortype = 	node[12+18*i];
+					devInfo.sensorvalue = 	node[13+18*i];
+					//注意没有14
+					devInfo.status = 		node[15+18*i];
+					newNodeInfo.row = 			(byte) node[16+18*i];
+					newNodeInfo.num =		(byte) node[17+18*i];
+					System.out.println("get node : "+ newNodeInfo.num);
+					newNodeInfo.devinfo	  = devInfo;
+					nodeInfos.add(newNodeInfo);//newNodeInfo.next = null;
+				}
+			}
+			Iterator<NodeInfo> nodeInfo = nodeInfos.iterator();
+		    float C1=-4.0f; // for 12 Bit
+		    float C2= 0.0405f; // for 12 Bit
+		    float C3=-0.0000028f; // for 12 Bit
+		    float T1=0.01f; // for 14 Bit @ 5V
+		    float T2=0.00008f; // for 14 Bit @ 5V
+			while(nodeInfo.hasNext()){
+				NodeInfo ni = nodeInfo.next();
+				DeviceInfo di = ni.devinfo;
+				System.out.println("devInfo.sensortype"+ di.sensortype);
+				if(di==null)
+					System.out.println("test  IS di!!");
+				if(ni==null)
+					System.out.println("test IS ni!!");
+				System.out.println("test  di.devtype:"+  di.devtype);
+				if(di.devtype==1 || di.devtype == 2)
+					show= show + new String("节点" + ni.num+":\t设备类型："+DEVTYPESTR[(int) di.devtype]+"\t传感器类型："+SENSORTYPESTR[(int) di.sensortype]);
+				if(di.sensortype == 2||di.sensortype ==3){
+					show = show +"\t传感器状态："+SENSORSTATUS[(int) di.sensorvalue];
+					System.out.println("LINE 455 \t # di.sensorvalue"+ di.sensorvalue);
+					if(di.sensorvalue == 1){//警告
+						ProcessAlarm(di.sensorvalue);
+					}
+				}else if(di.sensortype == SENSORTYPE_WENSHI){//温湿度 高地位分割  见 zigbee节点编程
+					long temp,humi;
+					byte[] tmp = HelpUtils.longToBytes(di.sensorvalue);
+					temp =  tmp[0]*256+tmp[1];
+					humi =  tmp[2]*256 + tmp[3];
+					float tempValue = (float)temp;
+					tempValue = (tempValue*(float)0.01-(float)42);
+					float humiValue = (float)humi;
+
+				    float rh_lin=C3*humiValue + C2*humiValue + C1; //calc. Humidity from ticks to [%RH]
+				    float rh_true=(tempValue-25)*(T1+T2*humiValue)+rh_lin; //calc. Temperature compensated humidity [%RH]
+					humiValue = rh_true;
+					System.out.println("float is "+tempValue +tmp[0]+" " + tmp[1]);
+					show = show + new String("\t温度" + tempValue +"\t湿度："+humiValue);
+					//float t=*p_temperature; // t: Temperature [Ticks] 14 Bit
+				}
+				show = show +"\n";
+			}
+			//@wei 这个client随activity初始化。
+			//所以测试客户端 默认在ui activity一直存在
+			//正确的思路 ： create activity(每次） -->传递handler  --> 通过handler更新ui
+			//				onDestory 时 UIhandler =null;
+	        if(UIhandler!=null){
+		        Message childMsg = UIhandler.obtainMessage();
+		        childMsg.obj = show;
+	        	UIhandler.sendMessage(childMsg);
+	        }
+		}
+		private int count;
+		private void ProcessAlarm(long sensorvalue) {
+			// TODO Auto-generated method stub
+			TCPClient.this.Client_Send(CLIENT_COMMAND_CLEARINT);
+			if(sensorvalue == 1){
+				if(count == 0){
+					System.out.println("ProcessAlarm \t:警告！！");
+				}
+				if(++count == 10000)
+					count = 0;
+			}
+		}
+
+		private void Cliect_ZigBeeNwkInfo_Process(long[] nwkinfo)
+		{
+		    pNwkDesp2.panid=nwkinfo[0];
+		    pNwkDesp2.channel=nwkinfo[1];
+		    //qDebug("pNwkDesp2.channel=%ld\n",pNwkDesp2.channel);
+		    //qDebug("pNwkDesp2->channel=%d %d\n",*(nwkinfo+2),(*(nwkinfo+1)));
+		    pNwkDesp2.maxchild=nwkinfo[3];
+		    pNwkDesp2.maxdepth=nwkinfo[4];
+		    pNwkDesp2.maxrouter=nwkinfo[5];
+		}
+		
+		private void Cliect_TempHum_Process(long[] rxLong) {
+			// TODO Auto-generated method stub
+			
 		}
 	}
 
 }
-/*
+/* be clear ..
  * 
  * //客户端读取线程代码： import java.io.IOException; import java.nio.ByteBuffer; import
  * java.nio.channels.SelectionKey; import java.nio.channels.Selector; import

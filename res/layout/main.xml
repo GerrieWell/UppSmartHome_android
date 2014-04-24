@@ -80,23 +80,16 @@
                 android:orientation="vertical" >
 
                 <Button
-                    android:id="@+id/button_gate"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="打开车库大门" />
-
-                <Button
                     android:id="@+id/out_todo"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="出门备忘" />
 
                 <Button
-                    android:id="@+id/refresh_button"
+                    android:id="@+id/test"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="刷新状态" />
-
+                    android:text="语音识别" />
             </LinearLayout>
 
             <LinearLayout
@@ -108,7 +101,7 @@
                     android:id="@+id/button_infrared"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="红外安防" />
+                    android:text="安防系统:关" />
 
                 <Button
                     android:id="@+id/real_time_pic"
@@ -116,11 +109,6 @@
                     android:layout_height="wrap_content"
                     android:text="实时图片" />
 
-                <Button
-                    android:id="@+id/test"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="语音识别" />
 
             </LinearLayout>
 
@@ -157,11 +145,14 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content" >
 
-            <EditText
+            <TextView
                 android:id="@+id/home_state"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
+                android:editable="false"
+                android:
+                android:lines="5"
                 android:ems="10"
                 android:inputType="textMultiLine" />
 

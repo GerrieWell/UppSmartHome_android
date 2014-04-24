@@ -12,23 +12,19 @@ import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketAddress;
-import java.net.UnknownHostException;
 
 import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
+import android.app.ProgressDialog;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.os.AsyncTask;
 import android.os.Environment;
-import android.os.Handler;
 import android.os.IBinder;
-import android.os.Looper;
-import android.os.Message;
-import android.view.View;
-import android.widget.Toast;
 
 public class AlarmListenerService extends Service {
 	/*
@@ -97,152 +93,7 @@ public class AlarmListenerService extends Service {
 		serviceRan=true;
 		return super.onStartCommand(intent, flags, startId);
 	}
-/*	*//**
-	 * 
-	 * @param tx
-	 * @param ack
-	 * @return false: cmd return false ||tcp fault
-	 * 		   true : cmd return true;
-	 *//*
-	
-	public static boolean sendCmdByTCP(byte[] tx,String ack){
-		if(!mutexEnble){
-			return false;
-		}
-		
-		String rx_buf=null;
-		if(null==client){
-			System.out.println("client null");
-		}
-		if((null==client)||(!client.isConnected())||client.isClosed()){
-			return false;
-		}
-			try {			
-				if((null!=client)&&client.isConnected()){
-					client.write(tx);
-				}
-				System.out.print("tx buf:");
-				for(int i=0;i<5;i++){
-					System.out.print(" "+Integer.toHexString(tx[i]).toUpperCase()); 
-				}
-				System.out.println(" ");
-				mutexEnble=false;
-				while(rx_buf==null){
-					rx_buf=shBuf.readLine();
-				}
-				System.out.println(rx_buf);
-				if(rx_buf.equals(ack)){
-					System.out.println("tag\t    send cmd successfully");
-					return true;
-				}else if(rx_buf.equals("error")){
-					System.out.println("tag\t    send cmd return false");
-					return false;
-				}
-			} catch (IOException e) {
-				e.printStackTrace();
-			}finally{
-				mutexEnble=true;
-			}
-			return false; 
-	}
 
-	public static void sendCmdByTCP(String tx,String ack){
-		if(!mutexEnble){
-			return;
-		}
-		
-		String rx_buf=null;
-		//String ackStr = null;
-		if((null==client)||(!client.isConnected())){
-			return ;
-		}
-			try {			
-				if((null!=client)&&client.isConnected()){
-					shOut.print(tx);
-					//shOut.close();
-				}
-				mutexEnble=false;
-				while(rx_buf==null){
-					rx_buf=shBuf.readLine();
-				}
-				System.out.println(rx_buf);
-				if(rx_buf.equals(ack)){
-					System.out.println("report    # send cmd successfully");
-					mutexEnble=true;
-				}
-			} catch (IOException e) {
-				mutexEnble=true;
-				e.printStackTrace();
-			}finally{
-				mutexEnble=true;
-			}
-	}
-
-	public static void sendCmdByTCP(byte[] tx,byte[] ack){
-		int mutexTry=0;
-		while(!mutexEnble&&mutexTry<10){
-			if(mutexTry==0)
-			mutexTry++;
-			if(mutexTry==10)
-				return ;
-		}
-		
-		byte[] rx_buf = new byte[64];
-		String rxStr = null;
-		int read_len=0;
-		if((null==client)||(!client.isConnected())){
-			return ;
-		}
-		try {			
-			mutexEnble=false;
-			if((null!=client)&&client.isConnected()){
-				os.write(tx, 0, 5);
-			}
-			System.out.print("tx buf:");
-			for(int i=0;i<5;i++){
-				System.out.print(" "+Integer.toHexString(tx[i]).toUpperCase()); 
-			}
-			System.out.println(" ");
-			//请求更新信号不返回
-			if(tx[2]==(byte)0xbf && tx[3]==(byte)0){
-				return;
-			}
-
-			int OverTime=0;
-			
-			while((read_len)!=6)  //@ 加入超次数判断
-			{  				
-				OverTime++;
-				System.out.println("going to sleep");
-				Thread.sleep(300);
-				read_len=is.read(rx_buf);
-				System.out.println("read_len="+read_len);
-				if(read_len==6)
-					break;
-				if(OverTime==20){
-					System.out.println("连接超时!!");
-					break;
-				}
-			}
-			byte temp=rx_buf[0];
-			if(rx_buf[0]==(byte)0xee){
-				System.out.println("right");
-			}
-			for(int i = 0;i<6;i++){
-				System.out.print(" ,"+ Integer.toHexString(rx_buf[i]).toUpperCase());
-				ack[i]=rx_buf[i];
-			}
-			mutexEnble=true;
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}finally{
-			mutexEnble=true;
-		}
-	}	*/
 /**
  * 
  * @param txLong
@@ -255,10 +106,10 @@ public class AlarmListenerService extends Service {
 		long rxArr[] = new long[256];
 		//String rxStrBuf = null;
 		tmp = new byte[4];
-		tx  = new byte[txLong.length*4];
+		tx  = new byte[txLong.length];
 		rxTmp2 = new byte[1024];
 		MyClientDemo.getLineNumber(new Exception());
-		for(int i = 0 ; i < txLong.length;i++){
+		for(int i = 0 ; i < txLong.length/4;i++){
 			tmp = HelpUtils.longToBytes(txLong[i]);
 			System.arraycopy(tmp, 0, tx, i*4, 4);
 		}
@@ -280,41 +131,22 @@ public class AlarmListenerService extends Service {
 		try {			
 			mutexEnble=false;
 			if((null!=client)&&client.isConnected()){
-				client.write(tx, 0, tx.length);
+				client.write(tx, 0, tx.length/4);
 			}
 			System.out.print("tx buf:");
 			for(int i=0;i<5;i++){
 				System.out.print(" "+Integer.toHexString(tx[i]).toUpperCase()); 
 			}
 			System.out.println(" ");
-			//请求更新信号不返回
-			/*if(tx[2]==(byte)0xbf && tx[3]==(byte)0){
-				return;
-			}*/
-/*			while(rxStrBuf==null){
-				rxStrBuf = shBuf.readLine();
-			}*/
-/*			new Thread(
-					new Runnable() {
-						@Override
-						public void run() {
-							try {
-								rxStrBuf = shBuf.readLine();
-								mutexEnble=true;
-							} catch (IOException e) {
-								// TODO Auto-generated catch block
-								e.printStackTrace();
-							}
-						}
-				}).start();*/
+			
 			client.readBlockWithTime(rxTmp2, 5);
 			while(!mutexEnble)
 				Thread.sleep(500);
-			if(rxArr.length < rxStrBuf.length()/4)
+			if(rxArr.length/4 < rxStrBuf.length())
 				return false;
 			rxTmp = rxStrBuf.getBytes();
 			
-			for(int i=0;i<rxStrBuf.length()/4;i++){
+			for(int i=0;i<rxStrBuf.length();i++){
 				System.arraycopy(rxTmp, i*4, tmp, 0, 4);
 				rxArr[i] = HelpUtils.StrToLong(tmp); 
 				System.out.println("long rx :" + rxArr[i]);
@@ -340,7 +172,7 @@ public class AlarmListenerService extends Service {
 	/**
 	 * 
 	 */
-	public static void TCPConnectFunction(){
+/*	public static void TCPConnectFunction(){
 		try {
 			if(null!=client&&(client.isConnected()&&(!client.isClosed()))){
 				isConnect=false;
@@ -361,7 +193,7 @@ public class AlarmListenerService extends Service {
 						// TODO Auto-generated method stub
 						try {
 							client = new TCPClient(MyClientDemo.IP, MyClientDemo.PORT);
-							/*System.out.println("create Socket success");
+							System.out.println("create Socket success");
 							os=client.getOutputStream();	
 MyClientDemo.getLineNumber(new Exception());
 							shOut = new PrintStream(
@@ -373,7 +205,7 @@ MyClientDemo.getLineNumber(new Exception());
 											is));		// 缓冲区读取
 							if(null!=client&&(client.isConnected()&&(!client.isClosed()))){
 								isConnect=true;
-							}*/
+							}
 						} catch (UnknownHostException e) {
 							// TODO Auto-generated catch block
 							System.out.println("new socket error!!");
@@ -391,17 +223,15 @@ MyClientDemo.getLineNumber(new Exception());
 			System.out.println("new stream error!!");
 			e.printStackTrace();
 		}
-	}
+	}*/
 	
-	public static boolean isConnectedTCP(){
-		return (AlarmListenerService.client!=null&&AlarmListenerService.client.isConnected()&&!AlarmListenerService.client.isClosed());
-	}
-	/**
+
+/*	*//**
 	 * 
 	 * @param s
 	 * @return
-	 */
- 	public static Bitmap getPicByTCP(TCPClient s){
+	 *//*
+ 	public static Bitmap getPicByTCP(Socket s){
 		 Bitmap bitmap = null;    
 		 FileOutputStream fos=null;
 		 FileInputStream fis=null;
@@ -417,17 +247,58 @@ MyClientDemo.getLineNumber(new Exception());
 		 File file=new File(path);
 		 imgShowNum=ImgNum;
 		 ImgNum++;
-			if((null==s)||(!s.isConnected())){
-				//Toast.makeText(MyClientDemo.this, "未连接到智能家居系统", Toast.LENGTH_SHORT).show();
-				return null;
-			}
-		 return null;
-	}
+		if((null==s)||(!s.isConnected())){
+			//Toast.makeText(MyClientDemo.this, "未连接到智能家居系统", Toast.LENGTH_SHORT).show();
+			return null;
+		}
+		try {
+			System.out.println("Current line:"+MyClientDemo.getLineNumber(new Exception()));
+			if(!file.exists())
+				file.createNewFile();
+			fos=new FileOutputStream(file);  
+					PrintStream psOut = new PrintStream(
+					MyClientDemo.this.client.getOutputStream());				// 打印流输出
+			
+			InputStream is =MyClientDemo.this.client.getInputStream();
+					mutexEnble=false;
+			requestImg(qtClient,shOut);		//请求实时图片
+			count=is.read(buffer);
+			while((count)!=-1)  
+			{  
+				System.out.println("while count :"+count);
+				fos.write(buffer);  
+				if(count==-1||(count!=1360)){
+					System.out.println("eof");
+					break;
+				}
+				//count=is.read(temp);
+				count=is.read(temp);
+				buffer=new byte[count];
+				System.arraycopy(temp, 0, buffer, 0, count);
+			}  
+			mutexEnble=true;
+			fos.flush();
+			bitmap=BitmapFactory.decodeFile(path);
 
-    public void addNotification(String str) {
-		NotificationManager manager = (NotificationManager) this.getSystemService(Context.NOTIFICATION_SERVICE);
+			System.out.println("read pic success");
+			if(!(bitmap==null)){
+				//@w monitor_pic.setImageBitmap(bitmap);
+				return bitmap;
+			}
+
+			
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		 return null;
+	}*/
+	NotificationManager manager;
+	Notification notification;
+    public void initNotification(String str) {
+		manager = (NotificationManager) this.getSystemService(Context.NOTIFICATION_SERVICE);
 		// 创建一个Notification
-		Notification notification = new Notification();
+		notification = new Notification();
 		// 设置显示在手机最上边的状态栏的图标
 		notification.icon =android.R.drawable.ic_menu_today;
 		// 当当前的notification被放到状态栏上的时候，提示内容
@@ -440,7 +311,209 @@ MyClientDemo.getLineNumber(new Exception());
 		PendingIntent pendIntent = PendingIntent.getActivity(AlarmListenerService.this, 0, intent, 0);  
 		//notification.contentIntent = notificationIntent;
 		notification.setLatestEventInfo(AlarmListenerService.this, "SMARTHOME 提醒您:", str, pendIntent);
-		manager.notify(1, notification);
+		//manager.notify(1, notification);
 		
 	}
+    public static Socket qtClient;
+	public static PrintStream shOut;
+	public static BufferedReader shBuf ;
+	public static OutputStream os;
+	public static InputStream is;
+	
+	public static void connectQtServer(){
+		try {
+			if(null!=qtClient&&(qtClient.isConnected()&&(!qtClient.isClosed()))){
+				isConnect=false;
+				qtClient.close();
+				return ;
+			}
+			System.out.println("readly to connet");
+			qtClient = new Socket(MyClientDemo.IP, MyClientDemo.qtPORT);				// 指定服务器
+			//SocketAddress socAddress = new InetSocketAddress(MyClientDemo.IP,MyClientDemo.qtPORT); 
+			//qtClient.connect(socAddress, 5000);
+			
+			System.out.println("create Socket success");
+			os=qtClient.getOutputStream();	
+			shOut = new PrintStream(
+					os);				// 打印流输出
+			is=qtClient.getInputStream();
+			shBuf= new BufferedReader(		//输入流
+					new InputStreamReader(
+							is));		// 缓冲区读取
+			if(null!=qtClient&&(qtClient.isConnected()&&(!qtClient.isClosed()))){
+				isConnect=true;
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+	public static void requestImg(Socket client2,PrintStream ps) throws IOException{
+		if(client2.isConnected()){
+			ps.print("RequestImg");
+		}			
+	}
+	 public static int count;
+	 static byte buffer[]=new byte[1360]; 
+	 static char bufChar[] = new char[1360];
+	 static byte temp[]=new byte[1360];
+	 static boolean FLAG_READ_PIC_COMPLETE =false;
+	 static FileOutputStream fos=null;
+	public static Bitmap getPicByTCP(Context c){
+		 Bitmap bitmap = null;    
+		 
+		 FileInputStream fis=null;
+		 int waitSec = 10;
+		 
+		 String path;
+		
+		 String SDPATH=Environment.getExternalStorageDirectory()+"/";
+		 dir=new File(SDPATH+"zigbeeTCP/");
+		 if(!dir.exists())
+			 dir.mkdir();
+		 path=dir.getAbsolutePath()+"/temp"+ImgNum+".jpg";
+		 File file=new File(path);
+		 imgShowNum=ImgNum;
+		 ImgNum++;
+			if((null==qtClient)||(!qtClient.isConnected())){
+				//Toast.makeText(MyClientDemo.this, "未连接到智能家居系统", Toast.LENGTH_SHORT).show();
+				return null;
+			}
+				try {
+					System.out.println("Current line:"+MyClientDemo.getLineNumber(new Exception()));
+					if(!file.exists())
+						file.createNewFile();
+					fos=new FileOutputStream(file);  
+/*					PrintStream psOut = new PrintStream(
+							MyClientDemo.this.qtClient.getOutputStream());				// 打印流输出
+					
+					InputStream is =MyClientDemo.this.qtClient.getInputStream();
+*/					mutexEnble=false;
+					requestImg(qtClient,shOut);		//请求实时图片
+					
+					/*new Thread(
+							new Runnable() {
+								@Override
+								public void run() {
+									try {
+			//连接两个socket
+										count=is.read(buffer);
+										while((count)!=-1)  
+										{  
+											System.out.println("while count :"+count);
+											fos.write(buffer);  
+											if(count==-1||(count!=1360)){
+												System.out.println("eof");
+												break;
+											}
+											//count=is.read(temp);
+											Skipped 151 frames!  The application may be doing too much work on its main thread.
+											 * 
+											count=is.read(temp);
+											buffer=new byte[count];
+											System.arraycopy(temp, 0, buffer, 0, count);
+											Thread.sleep(30);
+										}  										
+										//mutexEnble=true;
+									} catch (IOException e) {
+										// TODO Auto-generated catch block
+										e.printStackTrace();
+									} catch (InterruptedException e) {
+										// TODO Auto-generated catch block
+										e.printStackTrace();
+									}
+									FLAG_READ_PIC_COMPLETE = true;
+								}
+					}).start();*/
+					PageTask task = new AlarmListenerService.PageTask(c);
+					task.execute("param");
+					while(!FLAG_READ_PIC_COMPLETE &&waitSec--!=0)
+						Thread.sleep(5000);
+					mutexEnble=true;
+					fos.flush();
+					count = 0;
+					//is.reset();
+					if(FLAG_READ_PIC_COMPLETE){
+						bitmap=BitmapFactory.decodeFile(path);
+						System.out.println("read pic success");
+					}
+					if(!(bitmap==null)){
+						//@w monitor_pic.setImageBitmap(bitmap);
+						return bitmap;
+					}
+
+					
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+		 return null;
+	}
+	
+	public static boolean isConnectedTCP(){
+		return (qtClient!=null&&qtClient.isConnected()&&qtClient.isClosed());
+	}
+	
+	public static class PageTask extends AsyncTask<String, Integer, String> {
+	        // 可变长的输入参数，与AsyncTask.exucute()对应
+	        ProgressDialog pdialog;
+	        InputStreamReader isReader;
+	        public PageTask(Context context){
+	        	isReader = new InputStreamReader(is);
+	        }
+			@Override
+			protected String doInBackground(String... params) {
+				// TODO Auto-generated method stub
+				try {
+//连接两个socket
+					buffer = new byte[1360];
+					count=is.read(buffer, 0, buffer.length);
+					//isReader.read(bufChar, 0, bufChar.length);
+					while((count)!=-1)  
+					{  
+						System.out.println("while count :"+count + "buffer[0]:"+ buffer[0]+ "buffer[1]" +buffer[1]);
+						if(count==-1){//||(count!=1360)){
+							System.out.println("eof or error");
+							//fos.write(buffer, 0, count);
+							break;
+						}
+						fos.write(buffer,0,count);  
+						//count=is.read(temp);
+						//Skipped 151 frames!  The application may be doing too much work on its main thread.
+						// * 
+						count=is.read(buffer, 0, 1360);
+						/*count=is.read(temp);
+						buffer=new byte[count];
+						System.arraycopy(temp, 0, buffer, 0, count);*/
+						Thread.sleep(30);
+						
+					}  										
+					//mutexEnble=true;
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				FLAG_READ_PIC_COMPLETE = true;
+				//temp = null;
+				
+				return null;
+			}
+			
+			public int readFuully(InputStream is,byte[] buf,int desiredByteCount) throws IOException{
+				int actualByteCount = 0;
+				while(actualByteCount < desiredByteCount){
+					actualByteCount += is.read(buf,actualByteCount,desiredByteCount - actualByteCount);
+				}
+				
+				return actualByteCount;
+			}
+			
+	 }
+
+
 }

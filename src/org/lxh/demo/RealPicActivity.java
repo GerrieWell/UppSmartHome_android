@@ -33,10 +33,10 @@ public class RealPicActivity extends Activity {
 			@Override
 			public void onClick(View v) {
 				// TODO Auto-generated method stub
-				/*Bitmap bitmap=AlarmListenerService.getPicByTCP(AlarmListenerService.client);
+				Bitmap bitmap=AlarmListenerService.getPicByTCP(RealPicActivity.this);
 				if(bitmap!=null){
 					monitor_pic.setImageBitmap(bitmap);
-				}*/
+				}
 				System.out.println("do nothing");
 			}
 		});
@@ -80,7 +80,8 @@ System.out.println("pervious path is :"+path);
 				public void onClick(DialogInterface dialog, int id) {
 					if(AlarmListenerService.client!=null&&AlarmListenerService.client.isConnected()&&!AlarmListenerService.client.isClosed()){
 						MyClientDemo.getLineNumber(new Exception());
-						AlarmListenerService.getPicByTCP(AlarmListenerService.client);
+						
+						AlarmListenerService.getPicByTCP(RealPicActivity.this);
 					}
 				}
 			})
@@ -92,8 +93,7 @@ System.out.println("pervious path is :"+path);
 			return;
 		}
 		if(AlarmListenerService.isConnectedTCP()){
-			//AlarmListenerService.getPicByTCP(AlarmListenerService.client);
-			;
+			AlarmListenerService.getPicByTCP(RealPicActivity.this);
 		}else{
 			MyClientDemo.toastShow(RealPicActivity.this, "未连接");
 		}

@@ -52,13 +52,13 @@ public class MyClientDemo extends Activity {
 	public static final byte CATE_GATE=(byte) 0xa2,CATE_LIGHT=(byte) 0xa1,CATE_EF=(byte)0xef
 			,CATE_EE=(byte) 0xee,CATE_ED=(byte)0xeb,FLAG_REMOTE_STATE_CATE_TODO=(byte)0xb0;
 	static byte CATE_WIRING=(byte) 0xa0,CATE_IR=(byte)0xa4;
-	public static String IP="10.0.136.249";
-	public static int PORT=7838;
+	public static String IP="10.0.136.142";
+	public static int PORT=7838,qtPORT = 7839;
 	public static final String ALARM_LISTENER_ACTION="ALARMLISTENERSERVICE";
 /*tools*/
 	Calendar calendar;
-	private Handler messageHandler;
-
+	public Handler messageHandler;
+	
 
 /* views */
 	//private boolean con_staus=false,outMode=false;
@@ -74,6 +74,7 @@ public class MyClientDemo extends Activity {
 	EditText out_todo_et;
 /*remote info*/	
 	private int str_num=6;
+	private TCPClient client;
 	public static int lightGroupNum=2;
 	int wir_sws[]={0,1,1,0,1,0,0};
 	public static byte lightStates[]=null;
@@ -84,13 +85,13 @@ public class MyClientDemo extends Activity {
 	//static boolean mutexEnble=true;
 	static byte cut_P6=0;
 	static boolean checkChangeble=true;
+	private boolean alarmToggle = false;
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		super.setContentView(R.layout.main);							// 调用布局
 		this.tcp_connect = (Button) super.findViewById(R.id.send);		// 取得组件
 		this.mode = (Button) super.findViewById(R.id.mode);				// 取得组件
-		this.buttonGate = (Button)this.findViewById(R.id.button_gate);	// 取得组件
 		this.button_lights = (Button) super.findViewById(R.id.button_lights);	// 取得组件
 		this.buttonAlarm = (Button) super.findViewById(R.id.button_alarm);		// 取得组件
 		this.info = (TextView) super.findViewById(R.id.info);			// 取得组件
@@ -105,9 +106,6 @@ public class MyClientDemo extends Activity {
 		adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item); 		//将adapter添加到spinner中 
 		wiRingSpin.setAdapter(adapter); 		//添加Spinner事件监听 
 		//some test
-		byte cc=(byte) String.valueOf(3).toCharArray()[0];
-		System.out.print("value c : %c"+cc);
-		
 		((Button) super.findViewById(R.id.button2)).setOnClickListener(new OnClickListener() {
 			
 			@Override
@@ -138,63 +136,24 @@ public class MyClientDemo extends Activity {
 					MyClientDemo.this.mode.setText("关闭外出模式");
 					
 					for(int i=0;i<lightGroupNum;i++){
-					//关闭所有灯
-						byte cmd1[] = {MyClientDemo.CATE_EF,0x05,MyClientDemo.CATE_LIGHT,(byte)(lightGroupNum)
-								,(byte)0x0};
-						//MyClientDemo.sendCmdByTCP(MyClientDemo.this,cmd1, "OK");
+						
 					}
 					for(int i=0;i<2;i++){
 					//目前只有两个电器//adapter.getCount()
-						byte cmd2[] = {MyClientDemo.CATE_EF,0x05,CATE_WIRING,(byte)( i)
+						byte cmd2[] = {MyClientDemo.CATE_EF,0x05,CATE_WIRING,(byte)(i)
 								,(byte)0};
-						//MyClientDemo.sendCmdByTCP(MyClientDemo.this,cmd2, "OK");
 					}
-					//打开红外安防
-					//byte cmd3[]={MyClientDemo.CATE_EF,0x05,CATE_IR,(byte)(0),(byte)1};
-					//MyClientDemo.sendCmdByTCP(MyClientDemo.this,"Rsecurity on", "ONOK");
-					
 					Toast.makeText(MyClientDemo.this, "关闭所有电器以节能", Toast.LENGTH_SHORT).show();
 					Toast.makeText(MyClientDemo.this, "已打开安防系统", Toast.LENGTH_SHORT).show();
 				}else{
 					//关闭红外安防
-					//byte cmd3[]={MyClientDemo.CATE_EF,0x05,CATE_IR,(byte)(0),(byte)0};
-					//MyClientDemo.sendCmdByTCP(MyClientDemo.this,"Rsecurity off", "OFFOK");
 					Toast.makeText(MyClientDemo.this, "已关闭安防系统", Toast.LENGTH_SHORT).show();
 					MyClientDemo.this.mode.setText("打开外出模式");
 				}
 				AlarmListenerService.outMode=!AlarmListenerService.outMode;
 			}
 		});
-		wiRingSpin.setOnItemSelectedListener(new Spinner.OnItemSelectedListener() {
 
-			@Override
-			public void onItemSelected(AdapterView<?> arg0, View arg1,
-					int arg2, long arg3) {
-				if(arg2==str_num){
-					arg0.setVisibility(View.VISIBLE);
-					return;
-				}
-				if(wir_sws[arg2]!=0)
-					wir_sws[arg2]=0;
-				else
-					wir_sws[arg2]=1;
-				wirings[arg2]=wir_str_temp[arg2]+sw[wir_sws[arg2]];
-				wiRingSpin.setSelection(str_num);
-				arg0.setVisibility(View.VISIBLE);
-				//发送命令 
-				//构造数据包: ef(包标示) 05(包长) a0(电器) arg2(电器n) wir_sws(开关,0表示关,1~255表示动作)
-				//响应: OK
-				byte cmd1[] = {MyClientDemo.CATE_EF,0x05,CATE_WIRING,(byte)(arg2)
-						,(byte)(wir_sws[arg2])};
-				//MyClientDemo.this.sendCmdByTCP(MyClientDemo.this,cmd1, "OK");
-			}
-
-			@Override
-			public void onNothingSelected(AdapterView<?> arg0) {
-				// TODO Auto-generated method stub
-			}
-
-		});
 		//灯光控制listneer
 		this.button_lights.setOnClickListener(new OnClickListener() {
 			
@@ -219,25 +178,6 @@ public class MyClientDemo extends Activity {
 			}
 		});
 		
-		buttonGate.setOnClickListener(new OnClickListener() {
-			
-			@Override
-			public void onClick(View v) {
-				// TODO Auto-generated method stub
-				if(opened){
-					byte cmd1[] = {(byte) MyClientDemo.CATE_EF,0x05,(byte) 0xa2,0,0};
-					//MyClientDemo.sendCmdByTCP(MyClientDemo.this,cmd1, "OK");
-					buttonGate.setText("打开车库大门");
-					opened=false;
-				}else{
-					byte cmd1[] = {(byte) MyClientDemo.CATE_EF,0x05,(byte) 0xa2,0,1};
-					//MyClientDemo.sendCmdByTCP(MyClientDemo.this,cmd1, "OK");
-					buttonGate.setText("关闭车库大门");
-					opened=true;
-				}
-
-			}
-		});
 		/*定时事件*/
 		buttonAlarm.setOnClickListener(new OnClickListener() {
 			
@@ -361,18 +301,6 @@ public class MyClientDemo extends Activity {
 	
 		}
 	});
-		//刷新按钮
-		((Button)findViewById(R.id.refresh_button)).setOnClickListener(new OnClickListener() {
-			
-			@Override
-			public void onClick(View v) {
-				// TODO Auto-generated method stub
-				//bf 刷新, 	ee 05 bf 0管脚信息   0   请求更新
-				//			ee 05 bf 1/2被读管脚的节点   0   请求更新
-				//bf 刷新 ,	ee 05 bf 0状态信息  0 返回节点数 
-				new RefreshThread().start();
-			}
-		});
 		//灯光控制
 		fillLightView();
 		//fill_pic_view();
@@ -384,28 +312,36 @@ public class MyClientDemo extends Activity {
 			public void onClick(View v) {
 				// TODO Auto-generated method stub
 				//outTodoWin.showAtLocation(button_lights, Gravity.CENTER, 0, 0);
-				long[] getTopuInfo = {0x15,0x01,0x0a};
+				/*long[] getTopuInfo = {0x15,0x01,0x0a};
 				long [] ackArr = new long[128];
-				AlarmListenerService.sendCmdByTCP(getTopuInfo, ackArr);
+				AlarmListenerService.sendCmdByTCP(getTopuInfo, ackArr);*/
+				if(client!=null)
+					client.Client_Send(TCPClient.CLIENT_COMMAND_GETNWKINFO);
+				else
+					System.out.println("Activity\t# null point");
 			}
 		});
 		Looper looper =Looper.getMainLooper();
 		messageHandler = new MessageHandler(looper);
 
-		//new ServerThread().start();
-/*		if(!(AlarmListenerService.serviceRan))
-			startService(new Intent(MyClientDemo.this,AlarmListenerService.class));*/
-			//java.net.InetAddress x;
-	    TCPClient client;
+
 		new Thread(
 				new Runnable() {
 					@Override
 					public void run() {
 						try {
-							TCPClient client = new TCPClient(IP,PORT);
-							client.sendMsg("12345678 ");
+//连接两个socket
+							//AlarmListenerService.connectQtServer();
+							client = new TCPClient(IP,PORT,messageHandler);
+							while(true){
+								//ClientSetSensorStatus()
+								Thread.sleep(500);
+							}
 							//mutexEnble=true;
 						} catch (IOException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						} catch (InterruptedException e) {
 							// TODO Auto-generated catch block
 							e.printStackTrace();
 						}
@@ -413,90 +349,18 @@ public class MyClientDemo extends Activity {
 			}).start();
 	    
 	    
-/*	    try {
-	            //x = java.net.InetAddress.getByName("qq324791986.3322.org");
-	            //IP = x.getHostAddress();//得到字符串形式的ip地址
-	    		//IP = "10.0.136.124";
-	            System.out.println("IP is "+IP);
-	    } catch (UnknownHostException e) {
-	            // TODO Auto-generated catch block
-	            e.printStackTrace();
-	    } */
+		/*for test*/
+		long a = -1626775014L;
+		//new Long(a).byteValue();
+		//byte[] teset = longToByte(a);
+		//System.out.println("a.length = "+a. + "b.length");
 	}
-	/*
-	 * 在 发送刷新命令后调用*/
-	private boolean judgeUpdateAck(byte[] ack){
-		if(ack!=null){
-			if(ack[0]==(byte)0xee){
-				//EE 00(cate) 00(Pn) 00(value) 97 0A 
-				//ee 00 00 xy	'\r' '\n'// (标示) (节点index) (管脚组n) (管脚状态) (回车) (换行)
-				/**
-				 * 		    update_chars[1]=0;//route 0
-            				update_chars[2]=0;//p6
-				            update_chars[3]=rout_structs[0].pin6_state;//value */
-				System.out.println("ready to update");
-				if(ack[1]==(byte)0){
-					lightStates[0]=(byte)ack[3];
-					cut_P6=(byte)ack[3];
-				}else if(ack[1]==(byte)0x1){
-					lightStates[1]=(byte)ack[3];
-				}
-				//cut_P6=(byte)ack[3];
-				int ret=0;
-				ret=(lightStates[0]&((byte)0x40));
-				
-				if(ack[1]==(byte)0x00){
-					if(ret>=1){
-						wirings[0]=wir_str_temp[0]+sw[wir_sws[1]];
-					}else
-						wirings[0]=wir_str_temp[0]+sw[wir_sws[0]];
-					
-				}else if(ack[1]==(byte)0x01){
-/*					if(ret>=1){
-						wirings[1]=wir_str_temp[1]+sw[wir_sws[1]];
-					}else
-						wirings[1]=wir_str_temp[1]+sw[wir_sws[0]];*/
-				}
-			}
-		}
-		return AlarmListenerService.isConnect;
-	}
-	
+
+
+
 	protected void onResume() {
 		// TODO Auto-generated method stub
 		super.onResume();
-/*		Intent intent=getIntent();
-		int rx=intent.getIntExtra("alarm", 0);
-		if(intent.getAction().endsWith(ALARM_LISTENER_ACTION)){
-			monitorPicWin.setFocusable(true);
-			if(client.isConnected()&&!client.isClosed()){
-				MyClientDemo.this.getPicByTCP(client);
-			} else {
-				toastShow(MyClientDemo.this, "didn't connected");
-			}
-			//fill_pic_view();
-			monitorPicWin.setFocusable(true);
-			//monitorPicWin.showAtLocation(button_lights, Gravity.CENTER, 0, 0);
-			pic_foced=true;
-		}
-		if(rx==1){
-			if(((CheckBox)alarmView.findViewById(R.id.lights_event)).isChecked()){
-	//@假设台灯在 0组 第3个.
-				lightStates[0]|=(byte)(1<<3);
-				byte cmd1[] = {(byte) MyClientDemo.CATE_EF,0x05,(byte) 0xa1,0,lightStates[0]};
-				MyClientDemo.sendCmdByTCP(MyClientDemo.this,cmd1, "OK");
-			}
-			if(((CheckBox)alarmView.findViewById(R.id.curtain_event)).isChecked()){
-				byte cmd2[] = {(byte) MyClientDemo.CATE_EF,0x05,(byte) 0xa4,0,0};
-				//MyClientDemo.this.sendCmdByTCP(MyClientDemo.this,cmd2, "OK");							
-			}
-			if(((CheckBox)alarmView.findViewById(R.id.event_wiring)).isChecked()){
-				int num=event_wiring.getSelectedItemPosition();
-				byte cmd3[] = {(byte) MyClientDemo.CATE_EF,0x05,CATE_WIRING,(byte)( num)
-						,1};
-				MyClientDemo.sendCmdByTCP(MyClientDemo.this,cmd3, "OK");			
-			}
-		}*/
 	}
 
 	/**
@@ -653,22 +517,47 @@ public class MyClientDemo extends Activity {
 			//Intent i=new Intent(MyClientDemo.this,AlarmListenerService.class);
 			//i.setAction(AlarmListenerService.TCP_SERVICE_ACTION_CONNECT);
 			//startService(i);
-			AlarmListenerService.TCPConnectFunction();
 			//@wei
 			//wait Socket create successfully.
-			try {
-				Thread.sleep(400);
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+			if(null == client){
+				tcp_connect.setText("TCP连接（已连接）");
+				new Thread(
+						new Runnable() {
+							@Override
+							public void run() {
+								try {
+		//连接两个socket
+									//AlarmListenerService.connectQtServer();
+									client = new TCPClient(IP,PORT,messageHandler);
+	
+									//mutexEnble=true;
+								} catch (IOException e) {
+									// TODO Auto-generated catch block
+									e.printStackTrace();
+								}
+							}
+					}).start();
+				try {
+					Thread.sleep(400);
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}else{
+				tcp_connect.setText("TCP连接（断开）");
+				client = null;
 			}
-			if(AlarmListenerService.isConnect){
+			
+/*			if(AlarmListenerService.isConnect){
 				MyClientDemo.this.tcp_connect.setText("已连接(点击关闭连接)");
 				Toast.makeText(MyClientDemo.this, "已连接到智能家居系统", Toast.LENGTH_SHORT).show();
 			}else{
 				MyClientDemo.this.tcp_connect.setText("tcp连接");
 				Toast.makeText(MyClientDemo.this, "已关闭连接", Toast.LENGTH_SHORT).show();
 			}
+			在需要是连接
+			*/
+			
 		}
 
 	}
@@ -708,57 +597,14 @@ public class MyClientDemo extends Activity {
         @Override
         public void handleMessage(Message msg) {
             //处理收到的消息，把天气信息显示在title上
-        	smInfoText.append((String) msg.obj);
+        	smInfoText.setText((String) msg.obj);
         }
     }
-
-
-    class RefreshThread extends Thread{
-    	public void run(){
-
-			// TODO Auto-generated method stub
-			//bf 刷新, 	ee 05 bf 0管脚信息   0   请求更新
-			//			ee 05 bf 1/2被读管脚的节点   0   请求更新
-			//bf 刷新 ,	ee 05 bf 0状态信息  0 返回节点数 
-			byte cmd0[] = {MyClientDemo.CATE_EE,0x05,(byte) 0xbf,(byte) 0,(byte) 0};
-			//byte cmd1[] = {MyClientDemo.CATE_EE,0x05,(byte) 0xbf,(byte) 1,(byte) 0};
-			byte ack[]=new byte[6];
-			//MyClientDemo.sendCmdByTCP(MyClientDemo.this,cmd0, ack);
-			try {
-				AlarmListenerService.mutexEnble=false;
-			MyClientDemo.getLineNumber(new Exception());
-			Thread.sleep(3000);
-			AlarmListenerService.mutexEnble=true;
-			MyClientDemo.getLineNumber(new Exception());
-			cmd0[3]=(byte)0x1;
-			
-			//MyClientDemo.sendCmdByTCP(MyClientDemo.this,cmd0, ack);
-			MyClientDemo.getLineNumber(new Exception());
-			judgeUpdateAck(ack);
-			cmd0[3]=(byte)0x2;
-			
-			AlarmListenerService.mutexEnble=false;
-			Thread.sleep(100);
-			AlarmListenerService.mutexEnble=true;
-			MyClientDemo.getLineNumber(new Exception());
-			//MyClientDemo.sendCmdByTCP(MyClientDemo.this,cmd0, ack);
-			MyClientDemo.getLineNumber(new Exception());
-			judgeUpdateAck(ack);
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-            String str = "lightStates is "+Integer.toHexString(lightStates[0])
-            		+"route2 :"+Integer.toHexString(lightStates[1])+"\n";
-            //创建一个Message对象，并把得到的天气信息赋值给Message对象
-            Message message = Message.obtain();
-            message.obj = str;
-            //通过Handler发布携带有天气情况的消息
-            messageHandler.sendMessage(message);
-
-
-			//smInfoText.append();
-		
-    	}
-    }
 }
+
+
+/**
+ * 规划：
+ * 两个socket
+ * 
+*/

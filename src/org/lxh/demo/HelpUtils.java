@@ -1,6 +1,7 @@
 package org.lxh.demo;
 
-import android.widget.Toast;
+import java.nio.ByteBuffer;
+import java.nio.FloatBuffer;
 
 public class HelpUtils {
 	public static void qDebug(CharSequence s){
@@ -35,7 +36,7 @@ public class HelpUtils {
 	 public static byte[] longToBytes(long n){
 	  byte[] b = new byte[4];
 	  for(int i = 0;i < 4;i++){
-	   b[i] = (byte)(n >> (24 - i * 8)); 
+		  b[3-i] = (byte)(n >> (24 - i * 8));//b[i] = (byte)(n >> (24 - i * 8)); 
 	  }
 	  return b;
 	 }
@@ -46,6 +47,25 @@ public class HelpUtils {
 	  * @return 生成的int数据
 	  */
 	 public static long StrToLong(byte[] b){
-	  return (((long)b[0]) << 24) + (((long)b[1]) << 16) + (((long)b[2]) << 8) + b[3];
+	  return (((long)b[3]) << 24) + (((long)b[2]) << 16) + (((long)b[1]) << 8) + b[0];
 	 }
+	 
+	public static byte[] longToByte(long number) {
+		long temp = number;
+		byte[] b = new byte[8];
+		System.out.println("bytes  :");
+		for (int i = 0; i < b.length; i++) {
+			b[i] = new Long(temp & 0xff).byteValue();//
+			// 将最低位保存在最低位 temp = temp >> 8; // 向右移8位
+			System.out.println(" " + b[i]);
+		}
+		return b;
+	}
+	
+	//byte[]转float
+	public static float byteToFloat(byte[] v){
+	        ByteBuffer bb = ByteBuffer.wrap(v);
+	        FloatBuffer fb = bb.asFloatBuffer();
+	        return fb.get();
+	}
 }
