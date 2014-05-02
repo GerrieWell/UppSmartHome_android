@@ -74,7 +74,7 @@ public class AlarmListenerService extends Service {
 	public int onStartCommand(Intent intent, int flags, int startId) {
 		// TODO Auto-generated method stub
 		System.out.println("Service : onStartCommand");
-		/*		if(intent.getBooleanExtra("alarmRecved", false)){
+		if(intent.getBooleanExtra("alarmRecved", false)){
 			alarmRecved=true;
 			electric_sw = intent.getBooleanExtra("electric", false);
 			eltNum = intent.getIntExtra("electric_num", 1);
@@ -88,17 +88,212 @@ public class AlarmListenerService extends Service {
 
 		}else if(temp!=null&&temp.equals(TCP_SERVICE_ACTION_SEND)){
 			
-		}*/
+		}
 		
 		serviceRan=true;
 		return super.onStartCommand(intent, flags, startId);
 	}
 
+/**
+ * 
+ * @param txLong
+ * @param rxLong 
+ * @return true specified send successfully and get appropriate ACK;
+ */
+	public static boolean sendCmdByTCP(long[] txLong,long[] ackArr){
+		int mutexTry=0;
+		byte tx[],tmp[],rxTmp[],rxTmp2[];
+		long rxArr[] = new long[256];
+		//String rxStrBuf = null;
+		tmp = new byte[4];
+		tx  = new byte[txLong.length];
+		rxTmp2 = new byte[1024];
+		MyClientDemo.getLineNumber(new Exception());
+		for(int i = 0 ; i < txLong.length/4;i++){
+			tmp = HelpUtils.longToBytes(txLong[i]);
+			System.arraycopy(tmp, 0, tx, i*4, 4);
+		}
+		System.out.println(" txlong :"+txLong[0]+txLong[1]+txLong[2]);
+		MyClientDemo.getLineNumber(new Exception());
+		while(!mutexEnble&&mutexTry<10){
+			if(mutexTry==0)
+			mutexTry++;
+			if(mutexTry==10)
+				return false;
+		}
+		
+		//byte[] rx_buf = new byte[256];
+		//String rxStr = null;
+		//int read_len=0;
+		if((null==client)||(!client.isConnected())){
+			return false;
+		}
+		try {			
+			mutexEnble=false;
+			if((null!=client)&&client.isConnected()){
+				client.write(tx, 0, tx.length/4);
+			}
+			System.out.print("tx buf:");
+			for(int i=0;i<5;i++){
+				System.out.print(" "+Integer.toHexString(tx[i]).toUpperCase()); 
+			}
+			System.out.println(" ");
+			
+			client.readBlockWithTime(rxTmp2, 5);
+			while(!mutexEnble)
+				Thread.sleep(500);
+			if(rxArr.length/4 < rxStrBuf.length())
+				return false;
+			rxTmp = rxStrBuf.getBytes();
+			
+			for(int i=0;i<rxStrBuf.length();i++){
+				System.arraycopy(rxTmp, i*4, tmp, 0, 4);
+				rxArr[i] = HelpUtils.StrToLong(tmp); 
+				System.out.println("long rx :" + rxArr[i]);
+			}
+			mutexEnble=true;
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}finally{
+			mutexEnble=true;
+		}		
+		
+		return false;
+	}
+	
+
 	static int ImgNum=0;
 	static int imgShowNum=0;
 	static File dir=null;
 	public boolean pic_foced=false;
+	/**
+	 * 
+	 */
+/*	public static void TCPConnectFunction(){
+		try {
+			if(null!=client&&(client.isConnected()&&(!client.isClosed()))){
+				isConnect=false;
+				System.out.println("function : TCPConnectFunction  :ready to close socket");
+				client.close();
+				return ;
+			}
+			System.out.println("readly to connet IP is " +MyClientDemo.IP + "Port is "+MyClientDemo.PORT);
+			//client = new Socket(MyClientDemo.IP, MyClientDemo.PORT);				// 指定服务器
+			//SocketAddress socAddress = new InetSocketAddress(MyClientDemo.IP,MyClientDemo.PORT); 
+			//client.connect(socAddress, 5000);
+			
+			//smInfoText.setText("create Socket success");
+			new Thread(
+				new Runnable() {
+					@Override
+					public void run() {
+						// TODO Auto-generated method stub
+						try {
+							client = new TCPClient(MyClientDemo.IP, MyClientDemo.PORT);
+							System.out.println("create Socket success");
+							os=client.getOutputStream();	
+MyClientDemo.getLineNumber(new Exception());
+							shOut = new PrintStream(
+									os);				// 打印流输出
+							is=client.getInputStream();
+MyClientDemo.getLineNumber(new Exception());
+							shBuf= new BufferedReader(		//输入流
+									new InputStreamReader(
+											is));		// 缓冲区读取
+							if(null!=client&&(client.isConnected()&&(!client.isClosed()))){
+								isConnect=true;
+							}
+						} catch (UnknownHostException e) {
+							// TODO Auto-generated catch block
+							System.out.println("new socket error!!");
+							e.printStackTrace();
+						} catch (IOException e) {
+							// TODO Auto-generated catch block
+							System.out.println("new socket error!!");
+							e.printStackTrace();
+						}	
+					}
+			}).start();
 
+		} catch (Exception e) {
+			MyClientDemo.getLineNumber(e);
+			System.out.println("new stream error!!");
+			e.printStackTrace();
+		}
+	}*/
+	
+
+/*	*//**
+	 * 
+	 * @param s
+	 * @return
+	 *//*
+ 	public static Bitmap getPicByTCP(Socket s){
+		 Bitmap bitmap = null;    
+		 FileOutputStream fos=null;
+		 FileInputStream fis=null;
+		 byte buffer[]=new byte[1360];  
+		 byte temp[]=new byte[1360];
+		 String path;
+		 int count;
+		 String SDPATH=Environment.getExternalStorageDirectory()+"/";
+		 dir=new File(SDPATH+"zigbeeTCP/");
+		 if(!dir.exists())
+			 dir.mkdir();
+		 path=dir.getAbsolutePath()+"/temp"+ImgNum+".jpg";
+		 File file=new File(path);
+		 imgShowNum=ImgNum;
+		 ImgNum++;
+		if((null==s)||(!s.isConnected())){
+			//Toast.makeText(MyClientDemo.this, "未连接到智能家居系统", Toast.LENGTH_SHORT).show();
+			return null;
+		}
+		try {
+			System.out.println("Current line:"+MyClientDemo.getLineNumber(new Exception()));
+			if(!file.exists())
+				file.createNewFile();
+			fos=new FileOutputStream(file);  
+					PrintStream psOut = new PrintStream(
+					MyClientDemo.this.client.getOutputStream());				// 打印流输出
+			
+			InputStream is =MyClientDemo.this.client.getInputStream();
+					mutexEnble=false;
+			requestImg(qtClient,shOut);		//请求实时图片
+			count=is.read(buffer);
+			while((count)!=-1)  
+			{  
+				System.out.println("while count :"+count);
+				fos.write(buffer);  
+				if(count==-1||(count!=1360)){
+					System.out.println("eof");
+					break;
+				}
+				//count=is.read(temp);
+				count=is.read(temp);
+				buffer=new byte[count];
+				System.arraycopy(temp, 0, buffer, 0, count);
+			}  
+			mutexEnble=true;
+			fos.flush();
+			bitmap=BitmapFactory.decodeFile(path);
+
+			System.out.println("read pic success");
+			if(!(bitmap==null)){
+				//@w monitor_pic.setImageBitmap(bitmap);
+				return bitmap;
+			}
+
+			
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		 return null;
+	}*/
 	NotificationManager manager;
 	Notification notification;
     public void initNotification(String str) {
@@ -153,20 +348,6 @@ public class AlarmListenerService extends Service {
 			e.printStackTrace();
 		}
 	}
-	
-	public static void closeQtServer(){
-		try {
-			shOut.close();
-			shBuf.close();
-			os.close();
-			is.close();
-			qtClient.close();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-	}
-	
 	public static void requestImg(Socket client2,PrintStream ps) throws IOException{
 		if(client2.isConnected()){
 			ps.print("RequestImg");
@@ -178,8 +359,7 @@ public class AlarmListenerService extends Service {
 	 static byte temp[]=new byte[1360];
 	 static boolean FLAG_READ_PIC_COMPLETE =false;
 	 static FileOutputStream fos=null;
-	
-	 public static Bitmap getPicByTCP(Context c){
+	public static Bitmap getPicByTCP(Context c){
 		 Bitmap bitmap = null;    
 		 
 		 FileInputStream fis=null;
@@ -195,8 +375,7 @@ public class AlarmListenerService extends Service {
 		 File file=new File(path);
 		 imgShowNum=ImgNum;
 		 ImgNum++;
-			if((null==qtClient)||(!qtClient.isConnected())){	//未建立 或未曾连接过
-				//AlarmListenerService.this.isConnectedTCP();
+			if((null==qtClient)||(!qtClient.isConnected())){
 				//Toast.makeText(MyClientDemo.this, "未连接到智能家居系统", Toast.LENGTH_SHORT).show();
 				return null;
 			}
@@ -205,7 +384,11 @@ public class AlarmListenerService extends Service {
 					if(!file.exists())
 						file.createNewFile();
 					fos=new FileOutputStream(file);  
-					mutexEnble=false;
+/*					PrintStream psOut = new PrintStream(
+							MyClientDemo.this.qtClient.getOutputStream());				// 打印流输出
+					
+					InputStream is =MyClientDemo.this.qtClient.getInputStream();
+*/					mutexEnble=false;
 					requestImg(qtClient,shOut);		//请求实时图片
 					
 					/*new Thread(

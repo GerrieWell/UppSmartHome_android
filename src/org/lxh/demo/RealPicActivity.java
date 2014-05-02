@@ -100,9 +100,11 @@ System.out.println("pervious path is :"+path);
 		}else{
 			MyClientDemo.toastShow(RealPicActivity.this, "未连接");
 		}
+		/*连接 qt服务器*/
 		Intent i=new Intent(RealPicActivity.this,AlarmListenerService.class);
 		i.setAction(AlarmListenerService.TCP_SERVICE_ACTION_CONNECT);
 		startService(i);
+		AlarmListenerService.connectQtServer();
 	}
 	
 /*	public void fill_pic_view(){

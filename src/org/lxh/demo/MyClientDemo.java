@@ -134,27 +134,7 @@ public class MyClientDemo extends Activity {
 			
 			@Override
 			public void onClick(View v) {
-				// TODO Auto-generated method stub
-				//outMode=!outMode;
-				if(!AlarmListenerService.outMode){
-					MyClientDemo.this.mode.setText("关闭外出模式");
-					
-					for(int i=0;i<lightGroupNum;i++){
-						
-					}
-					for(int i=0;i<2;i++){
-					//目前只有两个电器//adapter.getCount()
-						byte cmd2[] = {MyClientDemo.CATE_EF,0x05,CATE_WIRING,(byte)(i)
-								,(byte)0};
-					}
-					Toast.makeText(MyClientDemo.this, "关闭所有电器以节能", Toast.LENGTH_SHORT).show();
-					Toast.makeText(MyClientDemo.this, "已打开安防系统", Toast.LENGTH_SHORT).show();
-				}else{
-					//关闭红外安防
-					Toast.makeText(MyClientDemo.this, "已关闭安防系统", Toast.LENGTH_SHORT).show();
-					MyClientDemo.this.mode.setText("打开外出模式");
-				}
-				AlarmListenerService.outMode=!AlarmListenerService.outMode;
+
 			}
 		});
 
@@ -329,7 +309,7 @@ public class MyClientDemo extends Activity {
 		messageHandler = new MessageHandler(looper);
 
 
-		new Thread(
+/*		new Thread(
 				new Runnable() {
 					@Override
 					public void run() {
@@ -337,9 +317,14 @@ public class MyClientDemo extends Activity {
 //连接两个socket
 							//AlarmListenerService.connectQtServer();
 							client = new TCPClient(IP,PORT,messageHandler);
+							Thread.sleep(1000);//等待初始化完成
 							while(true){
 								//ClientSetSensorStatus()
-								Thread.sleep(500);
+								if(client!=null){
+									client.Client_Send(TCPClient.CLIENT_COMMAND_GETNWKINFO);
+									client.Client_Send(TCPClient.CLIENT_COMMAND_CLEARINT);
+								}
+								Thread.sleep(1000);
 							}
 							//mutexEnble=true;
 						} catch (IOException e) {
@@ -350,7 +335,7 @@ public class MyClientDemo extends Activity {
 							e.printStackTrace();
 						}
 					}
-			}).start();
+			}).start();*/
 	    
 	    
 		/*for test*/
@@ -533,9 +518,20 @@ public class MyClientDemo extends Activity {
 		//连接两个socket
 									//AlarmListenerService.connectQtServer();
 									client = new TCPClient(IP,PORT,messageHandler);
-	
+									Thread.sleep(1000);//等待初始化完成
+									while(true){
+										//ClientSetSensorStatus()
+										if(client!=null){
+											client.Client_Send(TCPClient.CLIENT_COMMAND_GETNWKINFO);
+											//client.Client_Send(TCPClient.CLIENT_COMMAND_CLEARINT);
+										}
+										Thread.sleep(1000);
+									}
 									//mutexEnble=true;
 								} catch (IOException e) {
+									// TODO Auto-generated catch block
+									e.printStackTrace();
+								} catch (InterruptedException e) {
 									// TODO Auto-generated catch block
 									e.printStackTrace();
 								}
@@ -549,6 +545,7 @@ public class MyClientDemo extends Activity {
 				}
 			}else{
 				tcp_connect.setText("TCP连接（断开）");
+				client.close();
 				client = null;
 			}
 			

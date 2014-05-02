@@ -33,7 +33,8 @@ public class TCPClient {
 	public final static String[] SENSORTYPESTR 	= {"温湿度","人体红外","可然气体"};
 	public final static String[] SENSORSTATUS 	= {"正常","警告"};
 	public final static long SENSORTYPE_WENSHI =0;
-	
+	public final static long SENSORTYPE_RF		=1;
+	public final static long SENSORTYPE_SMOG	=2;
 	// 信道选择器
 	private Selector selector;
 
@@ -75,6 +76,9 @@ public class TCPClient {
 	 * 
 	 * @throws IOException
 	 */
+	
+	public TCPClientReadThread tr;
+	public TCPClientWriteThread tw;
 	private void initialize() throws IOException {
 		// 打开监听信道并设置为非阻塞模式
 		socketChannel = SocketChannel.open(new InetSocketAddress(hostIp,
@@ -84,12 +88,25 @@ public class TCPClient {
 		// 打开并注册选择器到信道
 		selector = Selector.open();
 		socketChannel.register(selector, SelectionKey.OP_READ);
-
+		//MyClientDemo.getLineNumber(new Exception());
 		// 启动读取线程
-		new TCPClientReadThread(selector);
-		new TCPClientWriteThread(this);
+		tr = new TCPClientReadThread(selector);
+		tw = new TCPClientWriteThread(this);
 		
 	}
+	public void close() {
+		try {
+			socketChannel.close();
+			//selector.select() > 0 return false read Thread end.
+			//todo 
+			mSendHandler.getLooper().quit();
+			System.out.println("thread is alive " + tr.isAlive() + " "+ tw.isAlive());
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
 	
 	/**
 	 * 发送字符串到服务器
@@ -136,15 +153,7 @@ public class TCPClient {
 		return false;
 	}
 	
-	
-	public void close() {
-		try {
-			socketChannel.close();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-	}
+
 
 	public boolean isConnected() {
 		return socketChannel.isConnected();
@@ -188,14 +197,29 @@ public class TCPClient {
 	Handler mSendHandler;
 	public class TCPClientWriteThread implements Runnable{
 		protected static final int CLINET_COMMAND_CATE_SYSTEM = 0x100;
+		protected static final int CLIEN_COMMAND_EXIT_THREAD  = 0x101;
 		TCPClient clientInner;
 		boolean alarmToggle = false;
+		private Thread t;
 		public TCPClientWriteThread(TCPClient c){
 			clientInner = c;
-			new Thread(this).start();
+			t = new Thread(this);
+			t.start();
+		}
+		public Thread getT() {
+			return t;
+		}
+		public String isAlive() {
+			// TODO Auto-generated method stub
+				// TODO Auto-generated method stub
+			if(t.isAlive())
+				return "yes";
+			else
+				return "no";
 		}
 		@Override
 		public void run() {
+			MyClientDemo.getLineNumber(new Exception());
 			Looper.prepare();
 			mSendHandler = new Handler(){
 	            public void handleMessage(Message msg) {
@@ -204,6 +228,8 @@ public class TCPClient {
 	            		boolean toggle = (msg.arg2 !=0);
 	            		alarmToggle = toggle;
 	            		return;
+	            	}if(msg.arg1 == CLIEN_COMMAND_EXIT_THREAD){
+	            		this.getLooper().quit();
 	            	}
 	            	long command = ((Long) msg.obj).longValue();
 	        		long tmp[] = {0x15,command,0x0a};
@@ -225,8 +251,6 @@ public class TCPClient {
 	        		//String rxStrBuf = null;
 	        		tmp = new byte[4];
 	        		tx  = new byte[txLong.length*4];
-	        		MyClientDemo.getLineNumber(new Exception());
-	        		System.out.println("txLong :" + txLong.length);
 	        		for(int i = 0 ; i < txLong.length;i++){
 	        			tmp = HelpUtils.longToBytes(txLong[i]);
 	        			System.arraycopy(tmp, 0, tx, i*4, 4);
@@ -234,39 +258,49 @@ public class TCPClient {
 	        		clientInner.write(tx, 0, tx.length);
 	        	}
 			};
-			 Looper.loop();
-			 while(true){
-				try {
-					TCPClient.this.Client_Send(TCPClient.CLIENT_COMMAND_GETNWKINFO);
-					TCPClient.this.Client_Send(CLIENT_COMMAND_CLEARINT);
-					Thread.sleep(1000);
-				} catch (InterruptedException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			 }
+			//Run the message queue in this thread. Be sure to call quit() to end the loop.
+			//loop 后面的代码不会执行
+			Looper.loop();
+			MyClientDemo.getLineNumber(new Exception());
 		}
 		
 	}
+	public boolean TCP_SUSPEND = false;
 	
 	public class TCPClientReadThread implements Runnable {
 		private Selector selector;
 		private byte[] rxTmp = new byte[4];
 		private long [] rxLongs = null;
 		private NwkDesp pNwkDesp2;
+		private Thread t;
 		public TCPClientReadThread(Selector selector) {
 			this.selector = selector;
 			this.pNwkDesp2 = new NwkDesp();
-			new Thread(this).start();
+			t = new Thread(this);
+			t.start();
+		}
+	
+		public Thread getT() {
+			return t;
+		}
+
+		public String isAlive() {
+			// TODO Auto-generated method stub
+			if(t.isAlive())
+				return "yes";
+			else
+				return "no";
 		}
 
 		public void run() {
 			try {
 				while (selector.select() > 0) {
 					// 遍历每个有可用IO操作Channel对应的SelectionKey
+					if(TCP_SUSPEND)
+						continue;
+					
 					FLAG_READ_COMPLETE = false;
 					for (SelectionKey sk : selector.selectedKeys()) {
-
 						// 如果该SelectionKey对应的Channel中有可读的数据
 						if (sk.isReadable()) {
 							// 使用NIO读取Channel中的数据
@@ -275,21 +309,15 @@ public class TCPClient {
 							ByteBuffer buffer = ByteBuffer.allocate(1024);
 							sc.read(buffer);
 							buffer.flip();
-
-							// 将字节转化为为UTF-16的字符串
-							//String receivedString = Charset.forName("US-ASCII")
-							//		.newDecoder().decode(buffer).toString();
-							
 							rx = buffer.array();
-							System.out.println("client # len :"+ buffer.arrayOffset() +" rx "+ rx.length);
+							//System.out.println("client # len :"+ buffer.arrayOffset() +" rx "+ rx.length);
 							buffer.position();
-							System.out.println( "position :" + buffer.position()+"limit:"+buffer.limit());
+							System.out.println( "limit:"+buffer.limit());
 							rxLongs = new long[buffer.limit()/4];
 							for(int i=0;i<buffer.limit()/4;i++){
 								System.arraycopy(rx, i*4, rxTmp, 0, 4);
 								rxLongs[i] = HelpUtils.StrToLong(rxTmp); 
-								//rxLongs[i] = buffer.getLong(i);
-								System.out.println("long rx :" + rxLongs[i] + "\ti = "+ i);
+								//System.out.println("long rx :" + rxLongs[i] + "\ti = "+ i);
 							}
 							// 控制台打印出来
 /*							System.out.println("接收到来自服务器"
@@ -381,7 +409,7 @@ public class TCPClient {
 			// TODO Auto-generated method stub
 			String show ="";
 			int count = node.length;
-			System.out.println("count : "+ count);
+			//System.out.println("count : "+ count);
 			ArrayList<NodeInfo> nodeInfos = new ArrayList<NodeInfo>();
 			if(count < 5){
 				if(node[0] == STATE_COOR_ONLINE_NOROUTE){
@@ -450,7 +478,7 @@ public class TCPClient {
 				System.out.println("test  di.devtype:"+  di.devtype);
 				if(di.devtype==1 || di.devtype == 2)
 					show= show + new String("节点" + ni.num+":\t设备类型："+DEVTYPESTR[(int) di.devtype]+"\t传感器类型："+SENSORTYPESTR[(int) di.sensortype]);
-				if(di.sensortype == 2||di.sensortype ==3){
+				if(di.sensortype == 2||di.sensortype ==1){
 					show = show +"\t传感器状态："+SENSORSTATUS[(int) di.sensorvalue];
 					System.out.println("LINE 455 \t # di.sensorvalue"+ di.sensorvalue);
 					if(di.sensorvalue == 1){//警告
