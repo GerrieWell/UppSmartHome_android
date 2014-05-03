@@ -99,8 +99,11 @@ public class TCPClient {
 			socketChannel.close();
 			//selector.select() > 0 return false read Thread end.
 			//todo 
-			mSendHandler.getLooper().quit();
-			System.out.println("thread is alive " + tr.isAlive() + " "+ tw.isAlive());
+			if(mSendHandler!=null){
+				mSendHandler.getLooper().quit();
+				System.out.println("thead write "+ tw.isAlive());
+			}
+			System.out.println("thread is alive " + tr.isAlive() );
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -186,13 +189,17 @@ public class TCPClient {
 	}*/
 	
 	public boolean Client_Send(long command){
+		if(mSendHandler == null || tw.isAlive()=="no")
+			return false;
         Message childMsg = mSendHandler.obtainMessage();
         //childMsg.obj = mSendHandler.getLooper().getThread().getName() + " says Hello";
         childMsg.obj = command;
+        
+        
         mSendHandler.sendMessage(childMsg);
          
         //Log.i(TAG, "Send a message to the child thread - " + (String)childMsg.obj);
-        return false;
+        return true;
 	}
 	Handler mSendHandler;
 	public class TCPClientWriteThread implements Runnable{
@@ -293,8 +300,9 @@ public class TCPClient {
 		}
 
 		public void run() {
+			boolean alive =true;
 			try {
-				while (selector.select() > 0) {
+				while (selector.select() > 0 && alive) {
 					// 遍历每个有可用IO操作Channel对应的SelectionKey
 					if(TCP_SUSPEND)
 						continue;
@@ -323,10 +331,13 @@ public class TCPClient {
 /*							System.out.println("接收到来自服务器"
 									+ sc.socket().getRemoteSocketAddress()
 									+ "的信息:" + receivedString);*/
-							
-							clientHandleRecvLongs(rxLongs);
-
-
+							if(rxLongs.length!=0)
+								clientHandleRecvLongs(rxLongs);
+							else{
+								System.out.println("server out");
+								alive = false;
+								break;
+							}
 							// 为下一次读取作准备
 							sk.interestOps(SelectionKey.OP_READ);
 							rx = null;

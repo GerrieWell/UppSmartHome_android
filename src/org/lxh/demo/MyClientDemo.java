@@ -309,33 +309,6 @@ public class MyClientDemo extends Activity {
 		messageHandler = new MessageHandler(looper);
 
 
-/*		new Thread(
-				new Runnable() {
-					@Override
-					public void run() {
-						try {
-//连接两个socket
-							//AlarmListenerService.connectQtServer();
-							client = new TCPClient(IP,PORT,messageHandler);
-							Thread.sleep(1000);//等待初始化完成
-							while(true){
-								//ClientSetSensorStatus()
-								if(client!=null){
-									client.Client_Send(TCPClient.CLIENT_COMMAND_GETNWKINFO);
-									client.Client_Send(TCPClient.CLIENT_COMMAND_CLEARINT);
-								}
-								Thread.sleep(1000);
-							}
-							//mutexEnble=true;
-						} catch (IOException e) {
-							// TODO Auto-generated catch block
-							e.printStackTrace();
-						} catch (InterruptedException e) {
-							// TODO Auto-generated catch block
-							e.printStackTrace();
-						}
-					}
-			}).start();*/
 	    
 	    
 		/*for test*/
@@ -515,12 +488,12 @@ public class MyClientDemo extends Activity {
 							@Override
 							public void run() {
 								try {
-		//连接两个socket
-									//AlarmListenerService.connectQtServer();
+		//连接两个socket				//AlarmListenerService.connectQtServer();
 									client = new TCPClient(IP,PORT,messageHandler);
+									if(client == null)
+										Toast.makeText(MyClientDemo.this, "Server error", Toast.LENGTH_SHORT).show();
 									Thread.sleep(1000);//等待初始化完成
-									while(true){
-										//ClientSetSensorStatus()
+									while(client!=null){
 										if(client!=null){
 											client.Client_Send(TCPClient.CLIENT_COMMAND_GETNWKINFO);
 											//client.Client_Send(TCPClient.CLIENT_COMMAND_CLEARINT);
