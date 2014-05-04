@@ -14,6 +14,7 @@ import java.util.Iterator;
 import zigbeeNet.DeviceInfo;
 import zigbeeNet.NodeInfo;
 import zigbeeNet.NwkDesp;
+import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
@@ -35,6 +36,9 @@ public class TCPClient {
 	public final static long SENSORTYPE_WENSHI =0;
 	public final static long SENSORTYPE_RF		=1;
 	public final static long SENSORTYPE_SMOG	=2;
+	
+	public static long prev = 0;
+	
 	// 信道选择器
 	private Selector selector;
 
@@ -47,7 +51,9 @@ public class TCPClient {
 	// 要连接的远程服务器在监听的端口
 	private int hostListenningPort;
 	
+	//android stuff
 	private Handler UIhandler;
+	private Context c;
 	
 	public boolean reading = false;
 	public boolean FLAG_READ_COMPLETE = false;
@@ -493,7 +499,7 @@ public class TCPClient {
 					show = show +"\t传感器状态："+SENSORSTATUS[(int) di.sensorvalue];
 					System.out.println("LINE 455 \t # di.sensorvalue"+ di.sensorvalue);
 					if(di.sensorvalue == 1){//警告
-						ProcessAlarm(di.sensorvalue);
+						ProcessAlarm(di.sensortype,di.sensorvalue);
 					}
 				}else if(di.sensortype == SENSORTYPE_WENSHI){//温湿度 高地位分割  见 zigbee节点编程
 					long temp,humi;
@@ -519,21 +525,45 @@ public class TCPClient {
 			//				onDestory 时 UIhandler =null;
 	        if(UIhandler!=null){
 		        Message childMsg = UIhandler.obtainMessage();
+		        childMsg.arg1 = MyClientDemo.UI_MESG_UPDATE_TOPO;
 		        childMsg.obj = show;
 	        	UIhandler.sendMessage(childMsg);
 	        }
 		}
 		private int count;
-		private void ProcessAlarm(long sensorvalue) {
+		/**
+		 * Unable to alarm in half of hour; 
+		 * @param sensorvalue
+		 */
+		private long now;
+		public void ProcessAlarm(long type,long sensorvalue) {
 			// TODO Auto-generated method stub
-			TCPClient.this.Client_Send(CLIENT_COMMAND_CLEARINT);
-			if(sensorvalue == 1){
-				if(count == 0){
+			//TCPClient.this.Client_Send(CLIENT_COMMAND_CLEARINT);
+			
+			now = System.currentTimeMillis();
+
+	        if(UIhandler!=null){
+		        Message childMsg = UIhandler.obtainMessage();
+		        /* 安防警告 15分钟之内不再触发 */
+				if(MyClientDemo.secureSW && (prev + 15*60*1000) < now){
+					prev = now;
 					System.out.println("ProcessAlarm \t:警告！！");
+					
+			        childMsg.arg1 = MyClientDemo.UI_MESG_ALARM;
+			        childMsg.obj = "智能家居系统收到警告！来自传感器：" + SENSORTYPESTR[(int) type];
+		        	UIhandler.sendMessage(childMsg);
+			        
 				}
-				if(++count == 10000)
-					count = 0;
-			}
+				
+	        	if(MyClientDemo.doorTipsSW){
+	        		childMsg.arg1 = MyClientDemo.UI_MESG_TIP;
+	        		//childMsg.obj  = " ";
+	        		UIhandler.sendMessage(childMsg);
+				}
+	        }
+			
+		
+
 		}
 
 		private void Cliect_ZigBeeNwkInfo_Process(long[] nwkinfo)

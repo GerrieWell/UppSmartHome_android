@@ -1,12 +1,30 @@
 package org.lxh.demo;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.ByteBuffer;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
+import java.nio.channels.SocketChannel;
+
+import org.lxh.demo.MyClientDemo.MessageHandler;
+
+import zigbeeNet.NwkDesp;
+
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.ProgressDialog;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.Message;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.Button;
@@ -17,10 +35,18 @@ import android.widget.Toast;
 public class RealPicActivity extends Activity {
 	
 	public static final String REALPIC_ACTION_UNEXPECTED = "unexp";
+	protected static final int UI_MESG_PIC_VIEW = 0;
 	PopupWindow monitorPicWin;
 	//View monitorPicView;
 	ImageView monitor_pic=null;
 	Button refresh_button;
+	public static final int PIC_CONNECT = 1;
+	public static final int PIC_SENDCMD = 2;
+	
+	private Handler mPicHandler;
+	public Handler realPicUI_Handler;
+	public Bitmap bitmap;
+	private TCPPicThread tThread;
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		// TODO Auto-generated method stub
@@ -32,15 +58,21 @@ public class RealPicActivity extends Activity {
 		
 		
 		refresh_button.setOnClickListener(new OnClickListener() {
-			
+			Bitmap bitmap ;
 			@Override
 			public void onClick(View v) {
 				// TODO Auto-generated method stub
-				Bitmap bitmap=AlarmListenerService.getPicByTCP(RealPicActivity.this);
-				if(bitmap!=null){
-					monitor_pic.setImageBitmap(bitmap);
-				}
-				System.out.println("do nothing");
+/*				new Thread(
+						new Runnable() {
+							@Override
+							public void run() {
+								bitmap = AlarmListenerService.getPicByTCP();//,RealPicActivity.this);
+
+							}
+					}).start();*/
+				Message m = mPicHandler.obtainMessage();
+				m.arg1 = PIC_SENDCMD;
+				mPicHandler.sendMessage(m);
 			}
 		});
 		((Button)findViewById(R.id.previous_pic)).setOnClickListener(new OnClickListener(
@@ -56,7 +88,7 @@ public class RealPicActivity extends Activity {
 				}
 				Bitmap bitmap = null;    
 				String path=null;
-				path=AlarmListenerService.dir.getAbsolutePath()+"/temp"+AlarmListenerService.imgShowNum+".jpg";
+				path=AlarmListenerService.dir.getAbsolutePath()+"/temp"+AlarmListenerService.imgShowNum+".png";
 System.out.println("pervious path is :"+path);
 				bitmap=BitmapFactory.decodeFile(path);
 				if(!(bitmap==null))
@@ -72,40 +104,126 @@ System.out.println("pervious path is :"+path);
 		});
 		//fill_pic_view();
 		//handle 
-		String temp=getIntent().getAction();
-		if(temp!=null&&temp.equals(REALPIC_ACTION_UNEXPECTED)){
-			//对话框是否要获取图像
-			//Dialog.
-			AlertDialog.Builder builder = new AlertDialog.Builder(this);
-			builder.setMessage("收到警告,要查看实时图片吗?")
-			.setCancelable(false)
-			.setPositiveButton("Yes", new DialogInterface.OnClickListener() {
-				public void onClick(DialogInterface dialog, int id) {
-					if(AlarmListenerService.client!=null&&AlarmListenerService.client.isConnected()&&!AlarmListenerService.client.isClosed()){
-						MyClientDemo.getLineNumber(new Exception());
-						
-						AlarmListenerService.getPicByTCP(RealPicActivity.this);
+		
+		tThread = new TCPPicThread();
+		tThread.start();
+		try {
+			Thread.sleep(200);
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		Message uiMessage = mPicHandler.obtainMessage();
+		uiMessage.arg1 = PIC_CONNECT;
+		mPicHandler.sendMessage(uiMessage);
+		Looper looper =Looper.getMainLooper();
+		realPicUI_Handler = new Handler(){
+	        public void handleMessage(Message msg) {
+	            //处理收到的消息，把天气信息显示在title上
+	        	
+	        	switch(msg.arg1){
+	        	case UI_MESG_PIC_VIEW:
+					if(bitmap!=null){
+						monitor_pic.setImageBitmap(bitmap);
 					}
-				}
-			})
-			.setNegativeButton("No", new DialogInterface.OnClickListener() {
-				public void onClick(DialogInterface dialog, int id) {
-					dialog.cancel();
-				}
-			}).show();
-			return;
-		}
-		if(AlarmListenerService.isConnectedTCP()){
-			AlarmListenerService.getPicByTCP(RealPicActivity.this);
-		}else{
-			MyClientDemo.toastShow(RealPicActivity.this, "未连接");
-		}
-		/*连接 qt服务器*/
-		Intent i=new Intent(RealPicActivity.this,AlarmListenerService.class);
-		i.setAction(AlarmListenerService.TCP_SERVICE_ACTION_CONNECT);
-		startService(i);
-		AlarmListenerService.connectQtServer();
+					else
+						System.out.println("do nothing");
+	        		break;
+	        	
+	        	}
+	        }
+		};
 	}
+	@Override
+	protected void onDestroy() {
+		// TODO Auto-generated method stub
+		mPicHandler.getLooper().quit();
+		super.onDestroy();
+	}
+
+
+	public class TCPPicThread extends Thread {
+		private Selector selector;
+		private byte[] rxTmp = new byte[4];
+		private long [] rxLongs = null;
+		private NwkDesp pNwkDesp2;
+		private Thread t;
+		public TCPPicThread() {
+		}
+	
+		public Thread getT() {
+			return t;
+		}
+
+		public void run() {
+			Looper.prepare();
+			mPicHandler = new Handler(){
+	            public void handleMessage(Message msg) {
+	            	/* 使用两个参数传递 */
+	            	if(msg.arg1 == PIC_CONNECT){
+	            		AlarmListenerService.connectQtServer();
+	            		return;
+	            	}else if(msg.arg1 == PIC_SENDCMD){
+	            		bitmap = AlarmListenerService.getPicByTCP();
+	            		Message mes = realPicUI_Handler.obtainMessage();
+	            		mes.arg1 = UI_MESG_PIC_VIEW;
+	            		realPicUI_Handler.sendMessage(mes);
+	            		//task.execute("PIC_UPDATE");
+	            	}
+	            }
+			};
+			Looper.loop();
+			AlarmListenerService.closeQtServer();
+		}
+	}
+	
+	
+/*	public class UITask extends AsyncTask<String, Integer, String> {
+        // 可变长的输入参数，与AsyncTask.exucute()对应
+        ProgressDialog pdialog;
+        InputStreamReader isReader;
+        public UITask(Context context){
+        	//isReader = new InputStreamReader(is);
+        }
+		@Override
+		protected String doInBackground(String... params) {
+			// TODO Auto-generated method stub
+			//AlarmListenerService.connectQtServer();
+			if(params[0].equals("PIC_UPDATE")){
+				if(bitmap!=null){
+					monitor_pic.setImageBitmap(bitmap);
+				}
+				else
+					System.out.println("do nothing");
+			}
+			return null;
+		}
+		
+		public int readFuully(InputStream is,byte[] buf,int desiredByteCount) throws IOException{
+			int actualByteCount = 0;
+			while(actualByteCount < desiredByteCount){
+				actualByteCount += is.read(buf,actualByteCount,desiredByteCount - actualByteCount);
+			}
+			
+			return actualByteCount;
+		}*/
+		
+ }
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
 	
 /*	public void fill_pic_view(){
 		LayoutInflater inflater=LayoutInflater.from(RealPicActivity.this);
@@ -145,4 +263,4 @@ System.out.println("pervious path is :"+path);
 			pic_foced=false;
 		}
 	}*/
-}
+

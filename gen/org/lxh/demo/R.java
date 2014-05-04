@@ -24,9 +24,9 @@ public final class R {
         public static final int btn_speak=0x7f060033;
         public static final int button2=0x7f060027;
         public static final int button_alarm=0x7f06001f;
-        public static final int button_infrared=0x7f060024;
         public static final int button_lights=0x7f060020;
         public static final int button_pic_cancel=0x7f06002b;
+        public static final int button_secure=0x7f060024;
         public static final int buttont1_temp=0x7f060031;
         public static final int buttontTemp2=0x7f060030;
         public static final int curtain_event=0x7f060004;

@@ -68,4 +68,12 @@ public class HelpUtils {
 	        FloatBuffer fb = bb.asFloatBuffer();
 	        return fb.get();
 	}
+	
+	public static int bToI(boolean b){
+		if(b)
+			return 1;
+		else
+			return 0;
+	}
+	
 }

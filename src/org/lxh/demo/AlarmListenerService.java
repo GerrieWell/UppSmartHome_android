@@ -74,21 +74,6 @@ public class AlarmListenerService extends Service {
 	public int onStartCommand(Intent intent, int flags, int startId) {
 		// TODO Auto-generated method stub
 		System.out.println("Service : onStartCommand");
-		/*		if(intent.getBooleanExtra("alarmRecved", false)){
-			alarmRecved=true;
-			electric_sw = intent.getBooleanExtra("electric", false);
-			eltNum = intent.getIntExtra("electric_num", 1);
-			lightchar=intent.getByteExtra("room_light", (byte)0);
-			light_opened=intent.getBooleanExtra("openLight", false);
-			System.out.println("Service start 35");
-			return super.onStartCommand(intent, flags, startId);
-		}
-		String temp=intent.getAction();
-		if(temp!=null&&temp.equals(TCP_SERVICE_ACTION_CONNECT)){
-
-		}else if(temp!=null&&temp.equals(TCP_SERVICE_ACTION_SEND)){
-			
-		}*/
 		
 		serviceRan=true;
 		return super.onStartCommand(intent, flags, startId);
@@ -135,7 +120,7 @@ public class AlarmListenerService extends Service {
 			}
 			System.out.println("readly to connet");
 			qtClient = new Socket(MyClientDemo.IP, MyClientDemo.qtPORT);				// 指定服务器
-			//SocketAddress socAddress = new InetSocketAddress(MyClientDemo.IP,MyClientDemo.qtPORT); 
+			SocketAddress socAddress = new InetSocketAddress(MyClientDemo.IP,MyClientDemo.qtPORT); 
 			//qtClient.connect(socAddress, 5000);
 			
 			System.out.println("create Socket success");
@@ -169,7 +154,8 @@ public class AlarmListenerService extends Service {
 	
 	public static void requestImg(Socket client2,PrintStream ps) throws IOException{
 		if(client2.isConnected()){
-			ps.print("RequestImg");
+			//ps.print("RequestImg");
+			ps.print("r");
 		}			
 	}
 	 public static int count;
@@ -179,22 +165,21 @@ public class AlarmListenerService extends Service {
 	 static boolean FLAG_READ_PIC_COMPLETE =false;
 	 static FileOutputStream fos=null;
 	
-	 public static Bitmap getPicByTCP(Context c){
+	 public static Bitmap getPicByTCP(){
 		 Bitmap bitmap = null;    
-		 
 		 FileInputStream fis=null;
 		 int waitSec = 10;
-		 
+		 /*file*/
 		 String path;
-		
 		 String SDPATH=Environment.getExternalStorageDirectory()+"/";
 		 dir=new File(SDPATH+"zigbeeTCP/");
 		 if(!dir.exists())
 			 dir.mkdir();
-		 path=dir.getAbsolutePath()+"/temp"+ImgNum+".jpg";
+		 path=dir.getAbsolutePath()+"/temp"+ImgNum+".png";
 		 File file=new File(path);
 		 imgShowNum=ImgNum;
 		 ImgNum++;
+		 ////
 			if((null==qtClient)||(!qtClient.isConnected())){	//未建立 或未曾连接过
 				//AlarmListenerService.this.isConnectedTCP();
 				//Toast.makeText(MyClientDemo.this, "未连接到智能家居系统", Toast.LENGTH_SHORT).show();
@@ -204,48 +189,13 @@ public class AlarmListenerService extends Service {
 					System.out.println("Current line:"+MyClientDemo.getLineNumber(new Exception()));
 					if(!file.exists())
 						file.createNewFile();
-					fos=new FileOutputStream(file);  
+					fos=new FileOutputStream(file);
 					mutexEnble=false;
 					requestImg(qtClient,shOut);		//请求实时图片
-					
-					/*new Thread(
-							new Runnable() {
-								@Override
-								public void run() {
-									try {
-			//连接两个socket
-										count=is.read(buffer);
-										while((count)!=-1)  
-										{  
-											System.out.println("while count :"+count);
-											fos.write(buffer);  
-											if(count==-1||(count!=1360)){
-												System.out.println("eof");
-												break;
-											}
-											//count=is.read(temp);
-											Skipped 151 frames!  The application may be doing too much work on its main thread.
-											 * 
-											count=is.read(temp);
-											buffer=new byte[count];
-											System.arraycopy(temp, 0, buffer, 0, count);
-											Thread.sleep(30);
-										}  										
-										//mutexEnble=true;
-									} catch (IOException e) {
-										// TODO Auto-generated catch block
-										e.printStackTrace();
-									} catch (InterruptedException e) {
-										// TODO Auto-generated catch block
-										e.printStackTrace();
-									}
-									FLAG_READ_PIC_COMPLETE = true;
-								}
-					}).start();*/
-					PageTask task = new AlarmListenerService.PageTask(c);
-					task.execute("param");
-					while(!FLAG_READ_PIC_COMPLETE &&waitSec--!=0)
-						Thread.sleep(5000);
+					Thread.sleep(2000);
+					readPicBlock();
+/*					while(!FLAG_READ_PIC_COMPLETE &&waitSec--!=0)
+						Thread.sleep(3000);*/
 					mutexEnble=true;
 					fos.flush();
 					count = 0;
@@ -258,80 +208,70 @@ public class AlarmListenerService extends Service {
 						//@w monitor_pic.setImageBitmap(bitmap);
 						return bitmap;
 					}
-
-					
 				} catch (IOException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				} catch (InterruptedException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 		 return null;
 	}
-	
+	public static int sum;
+	public static void readPicBlock(){
+		try {
+			buffer = new byte[1360];
+			count=is.read(buffer, 0, buffer.length);
+			//isReader.read(bufChar, 0, bufChar.length);
+			while(true)  
+			{  
+				System.out.println("while count :"+count + "buffer[0]:"+ buffer[0]+ "buffer[1]" +buffer[1]);
+				if(count==-1){//||(count!=1360)){
+					System.out.println("eof or error");
+					//fos.write(buffer, 0, count);
+					break;
+				}
+				fos.write(buffer,0,count);
+				sum += count;
+				if(/*sum > 46000 &&*/ count !=1360){
+					System.out.println("enough ");
+					break;
+				}
+				//count=is.read(temp);
+				//Skipped 151 frames!  The application may be doing too much work on its main thread.
+				// * 
+				count=is.read(buffer, 0, 1360);
+				//Thread.sleep(3);
+			}
+			//mutexEnble=true;
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			MyClientDemo.getLineNumber(new Exception());
+			e.printStackTrace();
+		}
+		MyClientDemo.getLineNumber(new Exception());
+		FLAG_READ_PIC_COMPLETE = true;
+		//temp = null;
+		
+	}
+	public static void readPicBlock2() throws IOException{
+/*		 int count = 0;
+		  while (count == 0 ) {
+		   count = is.available();
+		   System.out.println("available : is  "+ count);
+		  }
+		  byte[] b = new byte[count];
+		  is.read(b);*/
+		int len =0;
+		while((len=is.read())!=-1){
+			fos.write(len);
+		} 
+	}
+	 
+	 
 	public static boolean isConnectedTCP(){
 		return (qtClient!=null&&qtClient.isConnected()&&qtClient.isClosed());
 	}
 	
-	public static class PageTask extends AsyncTask<String, Integer, String> {
-	        // 可变长的输入参数，与AsyncTask.exucute()对应
-	        ProgressDialog pdialog;
-	        InputStreamReader isReader;
-	        public PageTask(Context context){
-	        	isReader = new InputStreamReader(is);
-	        }
-			@Override
-			protected String doInBackground(String... params) {
-				// TODO Auto-generated method stub
-				try {
-//连接两个socket
-					buffer = new byte[1360];
-					count=is.read(buffer, 0, buffer.length);
-					//isReader.read(bufChar, 0, bufChar.length);
-					while((count)!=-1)  
-					{  
-						System.out.println("while count :"+count + "buffer[0]:"+ buffer[0]+ "buffer[1]" +buffer[1]);
-						if(count==-1){//||(count!=1360)){
-							System.out.println("eof or error");
-							//fos.write(buffer, 0, count);
-							break;
-						}
-						fos.write(buffer,0,count);  
-						//count=is.read(temp);
-						//Skipped 151 frames!  The application may be doing too much work on its main thread.
-						// * 
-						count=is.read(buffer, 0, 1360);
-						/*count=is.read(temp);
-						buffer=new byte[count];
-						System.arraycopy(temp, 0, buffer, 0, count);*/
-						Thread.sleep(30);
-						
-					}  										
-					//mutexEnble=true;
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				} catch (InterruptedException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-				FLAG_READ_PIC_COMPLETE = true;
-				//temp = null;
-				
-				return null;
-			}
-			
-			public int readFuully(InputStream is,byte[] buf,int desiredByteCount) throws IOException{
-				int actualByteCount = 0;
-				while(actualByteCount < desiredByteCount){
-					actualByteCount += is.read(buf,actualByteCount,desiredByteCount - actualByteCount);
-				}
-				
-				return actualByteCount;
-			}
-			
-	 }
+
 
 
 }

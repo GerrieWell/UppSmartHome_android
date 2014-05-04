@@ -5,6 +5,8 @@ import java.util.Calendar;
 
 import android.app.Activity;
 import android.app.AlarmManager;
+import android.app.Notification;
+import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.TimePickerDialog;
 import android.content.Context;
@@ -44,7 +46,7 @@ import android.widget.ToggleButton;
 public class MyClientDemo extends Activity {
 	private Button tcp_connect = null;									// 定义按钮组件
 	private TextView info = null;								// 定义文本组件
-	private Button mode =null,buttonGate=null,buttonAlarm=null,button_lights=null,realPic=null;
+	private Button mode =null,buttonGate=null,buttonAlarm=null,button_lights=null,realPic=null,buttonSecure=null;
 	private TextView smInfoText;
 	private Spinner wiRingSpin = null,lightGroups=null;
 	private ArrayAdapter<String> adapter,lightAdapter,eventAdapter;
@@ -56,13 +58,16 @@ public class MyClientDemo extends Activity {
 			,CATE_EE=(byte) 0xee,CATE_ED=(byte)0xeb,FLAG_REMOTE_STATE_CATE_TODO=(byte)0xb0;
 	static byte CATE_WIRING=(byte) 0xa0,CATE_IR=(byte)0xa4;
 	public static String IP="10.0.136.142";
-	public static int PORT=7838,qtPORT = 7839;
+	public static int PORT=7838,qtPORT = 8686;//7839;
 	public static final String ALARM_LISTENER_ACTION="ALARMLISTENERSERVICE";
+	public static final int UI_MESG_ALARM = 1;
+	public static final int UI_MESG_UPDATE_TOPO = 2;
+	public static final int UI_MESG_TIP		=3;
 /*tools*/
 	Calendar calendar;
 	public Handler messageHandler;
-	
-
+	public static boolean secureSW = false;
+	public static boolean doorTipsSW = false;
 /* views */
 	//private boolean con_staus=false,outMode=false;
 
@@ -161,7 +166,6 @@ public class MyClientDemo extends Activity {
 				popWin.showAtLocation(button_lights, Gravity.CENTER, 0, 0);
 			}
 		});
-		
 		/*定时事件*/
 		buttonAlarm.setOnClickListener(new OnClickListener() {
 			
@@ -285,6 +289,21 @@ public class MyClientDemo extends Activity {
 	
 		}
 	});
+		//安防
+		buttonSecure = (Button)findViewById(R.id.button_secure);
+		buttonSecure.setOnClickListener(new OnClickListener() {
+			@Override
+			public void onClick(View v) {
+				// TODO Auto-generated method stub
+				TCPClient.prev = 0;
+/*				if(secureSW){
+					secureSW = true;
+				}else
+					secureSW =false;*/
+				secureSW = !secureSW;
+				buttonSecure.setText("安防系统"+sw[HelpUtils.bToI(secureSW)]);
+			}
+		});
 		//灯光控制
 		fillLightView();
 		//fill_pic_view();
@@ -308,11 +327,9 @@ public class MyClientDemo extends Activity {
 		Looper looper =Looper.getMainLooper();
 		messageHandler = new MessageHandler(looper);
 
-
-	    
-	    
 		/*for test*/
 		long a = -1626775014L;
+		initNotification();
 		//new Long(a).byteValue();
 		//byte[] teset = longToByte(a);
 		//System.out.println("a.length = "+a. + "b.length");
@@ -570,10 +587,51 @@ public class MyClientDemo extends Activity {
         }
         @Override
         public void handleMessage(Message msg) {
-            //处理收到的消息，把天气信息显示在title上
-        	smInfoText.setText((String) msg.obj);
+        	
+        	switch(msg.arg1){
+        	case UI_MESG_ALARM:
+        		nb.setContentText((String)msg.obj);
+        		notification = nb.getNotification();
+        		manager.notify(1, notification);
+        		break;
+        	case UI_MESG_UPDATE_TOPO:
+        		smInfoText.setText((String) msg.obj);
+        		break;
+        	
+        	}
         }
     }
+
+
+	private NotificationManager manager;
+	private Notification notification;
+	private Notification.Builder nb;
+    public void initNotification() {
+		manager = (NotificationManager) this.getSystemService(Context.NOTIFICATION_SERVICE);
+		/*		// 创建一个Notification
+		notification = new Notification();
+		notification.icon =android.R.drawable.ic_menu_today;
+		// 当当前的notification被放到状态栏上的时候，提示内容
+		notification.tickerText = "日程：";
+		notification.defaults=Notification.DEFAULT_SOUND;
+		notification.audioStreamType= android.media.AudioManager.ADJUST_LOWER;
+	// 点击状态栏的图标出现的提示信息设置
+		//notification.setLatestEventInfo(this.context, c.getContent()+" ","  ", pendingIntent);
+		//notification.contentIntent = notificationIntent;
+		notification.setLatestEventInfo(MyClientDemo.this, "SMARTHOME 提醒您:", str, pendIntent);
+		//manager.notify(1, notification);
+		notification.*/
+		Intent intent = new Intent(MyClientDemo.this, RealPicActivity.class);
+		PendingIntent pendIntent = PendingIntent.getActivity(MyClientDemo.this, 0, intent, 0);  
+    	
+		nb = new Notification.Builder(MyClientDemo.this)
+         .setContentTitle("智能家具系统检测到危险！")
+         .setContentText("来自传感器：")
+         .setSmallIcon(android.R.drawable.ic_menu_today)
+         .setContentIntent(pendIntent);
+        notification = nb.getNotification();
+	}
+    
 }
 
 
