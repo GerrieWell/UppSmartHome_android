@@ -30,12 +30,6 @@ import android.util.Log;
  * @version 1.00
  */
 public class TCPClient {
-	public final static String[] DEVTYPESTR 	= {"无","蓝色","green"};
-	public final static String[] SENSORTYPESTR 	= {"温湿度","人体红外","可然气体"};
-	public final static String[] SENSORSTATUS 	= {"正常","警告"};
-	public final static long SENSORTYPE_WENSHI =0;
-	public final static long SENSORTYPE_RF		=1;
-	public final static long SENSORTYPE_SMOG	=2;
 	
 	public static long prev = 0;
 	
@@ -200,10 +194,7 @@ public class TCPClient {
         Message childMsg = mSendHandler.obtainMessage();
         //childMsg.obj = mSendHandler.getLooper().getThread().getName() + " says Hello";
         childMsg.obj = command;
-        
-        
         mSendHandler.sendMessage(childMsg);
-         
         //Log.i(TAG, "Send a message to the child thread - " + (String)childMsg.obj);
         return true;
 	}
@@ -243,14 +234,14 @@ public class TCPClient {
 	            		return;
 	            	}if(msg.arg1 == CLIEN_COMMAND_EXIT_THREAD){
 	            		this.getLooper().quit();
+	            		return;
 	            	}
+	            	
 	            	long command = ((Long) msg.obj).longValue();
 	        		long tmp[] = {0x15,command,0x0a};
-	        		long addr = 0,state = 0;
+	        		
 	        		if(command == CLIENT_COMMAND_SETSENSOR){
-	        			addr = msg.arg1;
-	        			state = msg.arg2;
-	        			tmp = new long[]{ 0x15,0x03,addr,state,0x0a};
+	        			tmp = new long[]{ 0x15,0x03,MyClientDemo.addr,MyClientDemo.state,0x0a};
 	        		}
 	        		try {
 	        			writeLong(tmp);
@@ -279,7 +270,7 @@ public class TCPClient {
 		
 	}
 	public boolean TCP_SUSPEND = false;
-	
+	public static NodeInfo newNodeInfo;
 	public class TCPClientReadThread implements Runnable {
 		private Selector selector;
 		private byte[] rxTmp = new byte[4];
@@ -330,7 +321,7 @@ public class TCPClient {
 							rxLongs = new long[buffer.limit()/4];
 							for(int i=0;i<buffer.limit()/4;i++){
 								System.arraycopy(rx, i*4, rxTmp, 0, 4);
-								rxLongs[i] = HelpUtils.StrToLong(rxTmp); 
+								rxLongs[i] = HelpUtils.bytesToLong(rxTmp); 
 								//System.out.println("long rx :" + rxLongs[i] + "\ti = "+ i);
 							}
 							// 控制台打印出来
@@ -422,7 +413,7 @@ public class TCPClient {
 		public final static long SENSOR_TYPE_INT  = 0x3;
 		
 		
-		private void Cliect_ZigBeeNwkTopo_Process(long[] node) {
+		public void Cliect_ZigBeeNwkTopo_Process(long[] node) {
 			// TODO Auto-generated method stub
 			String show ="";
 			int count = node.length;
@@ -439,9 +430,10 @@ public class TCPClient {
 				}
 			}else{// count > 5   得到链表
 				int i =0;
-				NodeInfo firstNodeInfo =new NodeInfo();
+				NodeInfo firstNodeInfo = new NodeInfo();
 				DeviceInfo firstDevInfo = new DeviceInfo();
 				firstDevInfo.nwkaddr = node[0];
+System.out.println("nwkaddr is "+firstDevInfo.nwkaddr);
 				firstDevInfo.macaddr = new long[8];
 				for(int j=0;j<=7;j++)
 					firstDevInfo.macaddr[j] = node[j+1];
@@ -453,14 +445,15 @@ public class TCPClient {
 				firstDevInfo.status = 		node[15];
 				firstNodeInfo.row = 		(byte) node[16];
 				firstNodeInfo.num =		    (byte) node[17];
-				System.out.println("get node : "+ firstNodeInfo.num);
+//System.out.println("get node : "+ firstNodeInfo.num);
 				firstNodeInfo.devinfo	  		= firstDevInfo;
 				nodeInfos.add(firstNodeInfo);//firstNodeInfo.next = null;
 				//为什么要 -3
 				for(i=1;i<(count-3)/18;i++){//2+18  i=
-					NodeInfo newNodeInfo =new NodeInfo();
+					newNodeInfo = new NodeInfo();
 					DeviceInfo devInfo = new DeviceInfo();
 					devInfo.nwkaddr = node[18*i];
+//System.out.println("numb node: " +node[17+18*i] + "nwk is  : "+ devInfo.nwkaddr);
 					devInfo.macaddr = new long[8];
 					for(int j=0;j<=7;j++)
 						devInfo.macaddr[j] = node[(j+1)+18*i];
@@ -473,51 +466,10 @@ public class TCPClient {
 					devInfo.status = 		node[15+18*i];
 					newNodeInfo.row = 			(byte) node[16+18*i];
 					newNodeInfo.num =		(byte) node[17+18*i];
-					System.out.println("get node : "+ newNodeInfo.num);
+//System.out.println("get node : "+ newNodeInfo.num);
 					newNodeInfo.devinfo	  = devInfo;
 					nodeInfos.add(newNodeInfo);//newNodeInfo.next = null;
 				}
-			}
-			Iterator<NodeInfo> nodeInfo = nodeInfos.iterator();
-		    float C1=-4.0f; // for 12 Bit
-		    float C2= 0.0405f; // for 12 Bit
-		    float C3=-0.0000028f; // for 12 Bit
-		    float T1=0.01f; // for 14 Bit @ 5V
-		    float T2=0.00008f; // for 14 Bit @ 5V
-			while(nodeInfo.hasNext()){
-				NodeInfo ni = nodeInfo.next();
-				DeviceInfo di = ni.devinfo;
-				System.out.println("devInfo.sensortype"+ di.sensortype);
-				if(di==null)
-					System.out.println("test  IS di!!");
-				if(ni==null)
-					System.out.println("test IS ni!!");
-				System.out.println("test  di.devtype:"+  di.devtype);
-				if(di.devtype==1 || di.devtype == 2)
-					show= show + new String("节点" + ni.num+":\t设备类型："+DEVTYPESTR[(int) di.devtype]+"\t传感器类型："+SENSORTYPESTR[(int) di.sensortype]);
-				if(di.sensortype == 2||di.sensortype ==1){
-					show = show +"\t传感器状态："+SENSORSTATUS[(int) di.sensorvalue];
-					System.out.println("LINE 455 \t # di.sensorvalue"+ di.sensorvalue);
-					if(di.sensorvalue == 1){//警告
-						ProcessAlarm(di.sensortype,di.sensorvalue);
-					}
-				}else if(di.sensortype == SENSORTYPE_WENSHI){//温湿度 高地位分割  见 zigbee节点编程
-					long temp,humi;
-					byte[] tmp = HelpUtils.longToBytes(di.sensorvalue);
-					temp =  tmp[0]*256+tmp[1];
-					humi =  tmp[2]*256 + tmp[3];
-					float tempValue = (float)temp;
-					tempValue = (tempValue*(float)0.01-(float)42);
-					float humiValue = (float)humi;
-
-				    float rh_lin=C3*humiValue + C2*humiValue + C1; //calc. Humidity from ticks to [%RH]
-				    float rh_true=(tempValue-25)*(T1+T2*humiValue)+rh_lin; //calc. Temperature compensated humidity [%RH]
-					humiValue = rh_true;
-					System.out.println("float is "+tempValue +tmp[0]+" " + tmp[1]);
-					show = show + new String("\t温度" + tempValue +"\t湿度："+humiValue);
-					//float t=*p_temperature; // t: Temperature [Ticks] 14 Bit
-				}
-				show = show +"\n";
 			}
 			//@wei 这个client随activity初始化。
 			//所以测试客户端 默认在ui activity一直存在
@@ -526,45 +478,12 @@ public class TCPClient {
 	        if(UIhandler!=null){
 		        Message childMsg = UIhandler.obtainMessage();
 		        childMsg.arg1 = MyClientDemo.UI_MESG_UPDATE_TOPO;
-		        childMsg.obj = show;
+System.out.println("nodes num is "+ nodeInfos.size());
+		        childMsg.obj = nodeInfos;//show;
 	        	UIhandler.sendMessage(childMsg);
 	        }
 		}
-		private int count;
-		/**
-		 * Unable to alarm in half of hour; 
-		 * @param sensorvalue
-		 */
-		private long now;
-		public void ProcessAlarm(long type,long sensorvalue) {
-			// TODO Auto-generated method stub
-			//TCPClient.this.Client_Send(CLIENT_COMMAND_CLEARINT);
-			
-			now = System.currentTimeMillis();
 
-	        if(UIhandler!=null){
-		        Message childMsg = UIhandler.obtainMessage();
-		        /* 安防警告 15分钟之内不再触发 */
-				if(MyClientDemo.secureSW && (prev + 15*60*1000) < now){
-					prev = now;
-					System.out.println("ProcessAlarm \t:警告！！");
-					
-			        childMsg.arg1 = MyClientDemo.UI_MESG_ALARM;
-			        childMsg.obj = "智能家居系统收到警告！来自传感器：" + SENSORTYPESTR[(int) type];
-		        	UIhandler.sendMessage(childMsg);
-			        
-				}
-				
-	        	if(MyClientDemo.doorTipsSW){
-	        		childMsg.arg1 = MyClientDemo.UI_MESG_TIP;
-	        		//childMsg.obj  = " ";
-	        		UIhandler.sendMessage(childMsg);
-				}
-	        }
-			
-		
-
-		}
 
 		private void Cliect_ZigBeeNwkInfo_Process(long[] nwkinfo)
 		{

@@ -4,6 +4,8 @@ import zigbeeNet.DeviceInfo;
 import zigbeeNet.NwkDesp;
 
 public class ZigbeeStuff {
+
+	
 	public class NwkDesp {
 		long  	panid; 
 		long 	channel;  

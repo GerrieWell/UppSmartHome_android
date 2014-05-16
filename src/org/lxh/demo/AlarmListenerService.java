@@ -215,9 +215,24 @@ public class AlarmListenerService extends Service {
 				}
 		 return null;
 	}
-	public static int sum;
+	//public static int sum;
 	public static void readPicBlock(){
+		long size;
+		int sum = 0;
 		try {
+			byte[] tmp = new byte[4];
+			count = is.read(tmp);
+			long t = 0;
+			for(int i =0;i<4;i++){
+				t = (long)tmp[i] &0xff;
+				System.out.println("c : "+t);
+			}
+			if(count !=4)
+				return;
+			else{
+				size = (long)HelpUtils.bytesToLong2(tmp);
+				System.out.println("size is "+ size);
+			}
 			buffer = new byte[1360];
 			count=is.read(buffer, 0, buffer.length);
 			//isReader.read(bufChar, 0, bufChar.length);
@@ -231,7 +246,7 @@ public class AlarmListenerService extends Service {
 				}
 				fos.write(buffer,0,count);
 				sum += count;
-				if(/*sum > 46000 &&*/ count !=1360){
+				if(sum >=(size )){//if(/*sum > 46000 &&*/ count !=1360){
 					System.out.println("enough ");
 					break;
 				}

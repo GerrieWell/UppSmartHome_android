@@ -1,8 +1,12 @@
 package org.lxh.demo;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Iterator;
 
+import zigbeeNet.DeviceInfo;
+import zigbeeNet.NodeInfo;
 import android.app.Activity;
 import android.app.AlarmManager;
 import android.app.Notification;
@@ -11,19 +15,16 @@ import android.app.PendingIntent;
 import android.app.TimePickerDialog;
 import android.content.Context;
 import android.content.Intent;
-import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
-import android.text.AndroidCharacter;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup.LayoutParams;
-import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.CheckBox;
@@ -63,6 +64,13 @@ public class MyClientDemo extends Activity {
 	public static final int UI_MESG_ALARM = 1;
 	public static final int UI_MESG_UPDATE_TOPO = 2;
 	public static final int UI_MESG_TIP		=3;
+	public final static String[] DEVTYPESTR 	= {"无","蓝色","green"};
+	public final static String[] SENSORTYPESTR 	= {"温湿度","人体红外","可然气体","none1","none2","引脚信息"};
+	public final static String[] SENSORSTATUS 	= {"正常","警告"};
+	public final static long SENSORTYPE_WENSHI =0;
+	public final static long SENSORTYPE_RF		=1;
+	public final static long SENSORTYPE_SMOG	=2;
+	public final static long SENSORTYPE_PINS	=5;
 /*tools*/
 	Calendar calendar;
 	public Handler messageHandler;
@@ -77,6 +85,7 @@ public class MyClientDemo extends Activity {
 	ToggleButton light[]=null;
 	
 	Button pic_cancel,testButton,out_todo_button1;
+	TextView textTemp,textHumi;
 	Spinner event_wiring;
 	CheckBox out_todo_check1;
 	EditText out_todo_et;
@@ -103,7 +112,8 @@ public class MyClientDemo extends Activity {
 		this.button_lights = (Button) super.findViewById(R.id.button_lights);	// 取得组件
 		this.buttonAlarm = (Button) super.findViewById(R.id.button_alarm);		// 取得组件
 		this.info = (TextView) super.findViewById(R.id.info);			// 取得组件
-		wiRingSpin=(Spinner)findViewById(R.id.wiRingSpin); 
+		textTemp = (TextView)super.findViewById(R.id.text_temp);
+		textHumi = (TextView)super.findViewById(R.id.text_humi);
 		smInfoText=(TextView)findViewById(R.id.home_state);				//将可选内容与ArrayAdapter连接
 		smInfoText.setTextColor(Color.BLACK);
 		realPic=(Button)findViewById(R.id.real_time_pic);
@@ -314,14 +324,12 @@ public class MyClientDemo extends Activity {
 			@Override
 			public void onClick(View v) {
 				// TODO Auto-generated method stub
-				//outTodoWin.showAtLocation(button_lights, Gravity.CENTER, 0, 0);
-				/*long[] getTopuInfo = {0x15,0x01,0x0a};
-				long [] ackArr = new long[128];
-				AlarmListenerService.sendCmdByTCP(getTopuInfo, ackArr);*/
-				if(client!=null)
+				//manager.notify(1, notification);
+				outTodoWin.showAtLocation(button_lights, Gravity.CENTER, 0, 0);
+/*				if(client!=null)
 					client.Client_Send(TCPClient.CLIENT_COMMAND_GETNWKINFO);
 				else
-					System.out.println("Activity\t# null point");
+					System.out.println("Activity\t# null point");*/
 			}
 		});
 		Looper looper =Looper.getMainLooper();
@@ -354,7 +362,7 @@ public class MyClientDemo extends Activity {
 		popView=inflater.inflate(R.layout.lights_layout, null);
 		popWin=new PopupWindow(MyClientDemo.this);
 		popWin.setContentView(popView);
-		popWin.setWidth(LayoutParams.FILL_PARENT);
+		popWin.setWidth(LayoutParams.MATCH_PARENT);
 		popWin.setHeight(LayoutParams.WRAP_CONTENT);
 		popWin.setAnimationStyle(android.R.style.Animation_Dialog);
 		popWin.setFocusable(true);
@@ -362,7 +370,7 @@ public class MyClientDemo extends Activity {
 		lightAdapter=new ArrayAdapter<String>(MyClientDemo.this,android.R.layout.simple_spinner_item,MyClientDemo.this.light_str); 		//设置下拉列表风格 
 		lightAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item); 		//将adapter添加到spinner中 
 		lightGroups.setAdapter(lightAdapter); 		//添加Spinner事件监听 
-		lightGroups.setOnItemSelectedListener(new Spinner.OnItemSelectedListener() {
+/*		lightGroups.setOnItemSelectedListener(new Spinner.OnItemSelectedListener() {
 
 			@Override
 			public void onItemSelected(AdapterView<?> parent, View view,
@@ -392,7 +400,7 @@ public class MyClientDemo extends Activity {
 			}
 
 
-		});
+		});*/
 		((Button)popView.findViewById(R.id.pop_back)).setOnClickListener(new OnClickListener() {
 			
 			@Override
@@ -409,16 +417,13 @@ public class MyClientDemo extends Activity {
 		light[5]=(ToggleButton)popView.findViewById(R.id.toggleButton6);
 		light[6]=(ToggleButton)popView.findViewById(R.id.toggleButton7);
 		light[7]=(ToggleButton)popView.findViewById(R.id.toggleButton8);
-		System.out.println("3");
 		for(i=0;i<8;i++){
-			System.out.print("i is "+i);
 			light[i].setOnCheckedChangeListener(new OnCheckedChangeListener() {
 				int index=i;
 				@Override
 				public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
 					if(checkChangeble){
 						lightCheckChange(index,isChecked);
-						getLineNumber(new Exception());
 					}
 					
 				}
@@ -435,7 +440,7 @@ public class MyClientDemo extends Activity {
 		outTodoView=inflater.inflate(R.layout.out_todo_layout, null);
 		outTodoWin=new PopupWindow(MyClientDemo.this);
 		outTodoWin.setContentView(outTodoView);
-		outTodoWin.setWidth(LayoutParams.FILL_PARENT);
+		outTodoWin.setWidth(LayoutParams.MATCH_PARENT);
 		outTodoWin.setHeight(LayoutParams.WRAP_CONTENT);
 		outTodoWin.setAnimationStyle(android.R.style.Animation_Dialog);
 		outTodoWin.setFocusable(true);
@@ -444,18 +449,14 @@ public class MyClientDemo extends Activity {
 		out_todo_check1=(CheckBox)outTodoView.findViewById(R.id.out_todo_check1);
 		//出门备忘
 		out_todo_button1.setOnClickListener(new OnClickListener() {
-			
 			@Override
 			public void onClick(View v) {
-				// TODO Auto-generated method stub
-				byte cmd1[] = {(byte) MyClientDemo.CATE_EE,0x05,FLAG_REMOTE_STATE_CATE_TODO,(byte)0,(byte)0};
-				//String temp=""
-				
+/*				byte cmd1[] = {(byte) MyClientDemo.CATE_EE,0x05,FLAG_REMOTE_STATE_CATE_TODO,(byte)0,(byte)0};
 				if(out_todo_check1.isChecked()){
 					cmd1[3]=(byte)0x1;
-				}
+				}*/
+				doorTipsSW = out_todo_check1.isChecked();
 				String temp=((EditText)outTodoView.findViewById(R.id.out_todo_context_editText)).getText().toString();
-				System.out.println("temp 596:    "+temp);
 				AlarmListenerService.notificationShowStr=temp;
 				/*if(MyClientDemo.sendCmdByTCP(MyClientDemo.this,cmd1, "OK")){
 					System.out.println("cmdreturn #: todo sw open success!");
@@ -465,10 +466,20 @@ public class MyClientDemo extends Activity {
 		});
 		return ;
 	}
+	
+/*	public static String getGateWay() {
+		if (Netgear_WifiManager.wifiManager != null) 
+		{
+		DhcpInfo   dhcpInfo=Netgear_WifiManager.wifiManager.getDhcpInfo();
+					Log.e("gateway is ",
+							Netgear_IpAddressTranfer.long2ip(dhcpInfo.gateway));
+				}
+				return null;
+	}*/
 
 	public void lightCheckChange(int lightIndex ,boolean isChecked){
-		int a,b;
-		int lightGroupIndex;
+		int a = 0,b;
+		/*int lightGroupIndex;
 		lightGroupIndex=lightGroups.getSelectedItemPosition();
 		a=(int)lightStates[lightGroupIndex];
 		b=(int)~(1<<lightIndex);
@@ -481,10 +492,17 @@ public class MyClientDemo extends Activity {
 			a&=0xff;
 		}
 		lightStates[lightGroupIndex]=(byte)a;
-		byte cmd1[] = {(byte) MyClientDemo.CATE_EF,0x05,MyClientDemo.CATE_LIGHT,(byte)lightGroupIndex,lightStates[lightGroupIndex]};
+		byte cmd1[] = {(byte) MyClientDemo.CATE_EF,0x05,MyClientDemo.CATE_LIGHT,(byte)lightGroupIndex,lightStates[lightGroupIndex]};*/
 		//MyClientDemo.sendCmdByTCP(MyClientDemo.this,cmd1, "OK");
+		for(int i = 0 ;i<8;i++){
+			a|=HelpUtils.bToI(light[i].isChecked())<<i;
+		}
+		MyClientDemo.state = a;
+		System.out.println("a is "+ Integer.toBinaryString(a));
+		if(client!=null)
+			client.Client_Send(TCPClient.CLIENT_COMMAND_SETSENSOR);
 	}
-
+	public static long addr = 0,state = 0;
 	
 	
 	private class ConnectOnClickListenerImpl implements OnClickListener{
@@ -510,12 +528,13 @@ public class MyClientDemo extends Activity {
 									if(client == null)
 										Toast.makeText(MyClientDemo.this, "Server error", Toast.LENGTH_SHORT).show();
 									Thread.sleep(1000);//等待初始化完成
+									client.Client_Send(TCPClient.CLIENT_COMMAND_GETNWKINFO);
 									while(client!=null){
 										if(client!=null){
 											client.Client_Send(TCPClient.CLIENT_COMMAND_GETNWKINFO);
 											//client.Client_Send(TCPClient.CLIENT_COMMAND_CLEARINT);
 										}
-										Thread.sleep(1000);
+										Thread.sleep(2000);
 									}
 									//mutexEnble=true;
 								} catch (IOException e) {
@@ -538,7 +557,6 @@ public class MyClientDemo extends Activity {
 				client.close();
 				client = null;
 			}
-			
 /*			if(AlarmListenerService.isConnect){
 				MyClientDemo.this.tcp_connect.setText("已连接(点击关闭连接)");
 				Toast.makeText(MyClientDemo.this, "已连接到智能家居系统", Toast.LENGTH_SHORT).show();
@@ -595,13 +613,118 @@ public class MyClientDemo extends Activity {
         		manager.notify(1, notification);
         		break;
         	case UI_MESG_UPDATE_TOPO:
-        		smInfoText.setText((String) msg.obj);
+        		ArrayList<NodeInfo> nodeInfos = (ArrayList<NodeInfo>)msg.obj;
+        		String s = processNodeInfos(nodeInfos);
+        		smInfoText.setText(s/*(String) msg.obj*/);
+        		break;
+        	case UI_MESG_TIP:
+        		nb.setContentText((String)msg.obj);
+        		notification = nb.getNotification();
+        		manager.notify(1, notification);
         		break;
         	
         	}
         }
     }
+    /**
+     * 处理节点链表 更新ui
+     * @param nodeInfos
+     * @return
+     */
+    private String processNodeInfos(ArrayList<NodeInfo> nodeInfos){
+		Iterator<NodeInfo> nodeInfo = nodeInfos.iterator();
+	    float C1=-4.0f; // for 12 Bit
+	    float C2= 0.0405f; // for 12 Bit
+	    float C3=-0.0000028f; // for 12 Bit
+	    float T1=0.01f; // for 14 Bit @ 5V
+	    float T2=0.00008f; // for 14 Bit @ 5V
+	    String show = null;
+//System.out.println("nodeInfos size ="+ nodeInfos.size());
+		while(nodeInfo.hasNext()){
+			NodeInfo ni = nodeInfo.next();
+			DeviceInfo di = ni.devinfo;
+			System.out.println("devInfo.sensortype"+ di.sensortype);
+			System.out.println("test  di.devtype:"+  di.devtype);
+			if(di.devtype==1 || di.devtype == 2)
+				show= show + new String("节点" + ni.num+":\t设备类型："+DEVTYPESTR[(int) di.devtype]+"\t传感器类型："+SENSORTYPESTR[(int) di.sensortype]);
+/*sensor process */				
+			if(di.sensortype == 2||di.sensortype ==1){
+				show = show +"\t传感器状态："+SENSORSTATUS[(int) di.sensorvalue];
+				System.out.println("LINE 455 \t # di.sensorvalue"+ di.sensorvalue);
+				if(di.sensorvalue == 1){//警告
+					ProcessAlarm(di.sensortype,di.sensorvalue);
+				}
+			}else if(di.sensortype == SENSORTYPE_WENSHI){//温湿度 高地位分割  见 zigbee节点编程
+				long temp,humi;
+				byte[] tmp = HelpUtils.longToBytes(di.sensorvalue);
+				temp =  tmp[0]*256+tmp[1];
+				humi =  tmp[2]*256 + tmp[3];
+				float tempValue = (float)temp;
+				tempValue = (tempValue*(float)0.01-(float)42);
+				float humiValue = (float)humi;
 
+			    float rh_lin=C3*humiValue + C2*humiValue + C1; //calc. Humidity from ticks to [%RH]
+			    float rh_true=(tempValue-25)*(T1+T2*humiValue)+rh_lin; //calc. Temperature compensated humidity [%RH]
+				humiValue = rh_true;
+				System.out.println("float is "+tempValue +tmp[0]+" " + tmp[1]);
+				show = show + new String("\t温度" + tempValue +"\t湿度："+humiValue);
+				//float t=*p_temperature; // t: Temperature [Ticks] 14 Bit
+			}else if(di.sensortype == SENSORTYPE_PINS){
+				
+				System.out.println("pins value is "+ Long.toHexString(di.sensorvalue));
+				addr = di.nwkaddr;
+				show = show + new String("pins1:"+(di.sensorvalue & 0xff) +"\tpins2 : "+ (di.sensorvalue & 0xff00));
+				int temp = (int) (di.sensorvalue & 0x0000000000ff0000)>>16;
+System.out.println("temp : "+ Integer.toHexString(temp).toString());
+				for(int i=0;i<8;i++){		
+					int ret=((temp&0xff)&((int)0x1));
+					checkChangeble=false;
+					if(ret>=1){
+						light[i].setChecked(true);
+					}else
+						light[i].setChecked(false);
+					checkChangeble=true;
+					temp >>>= 1;
+				}
+			}
+/*sensor process END*/	
+			show = show +"\n";
+		}
+		return show;
+    }
+    
+	private int count;
+	/**
+	 * Unable to alarm in half of hour; 
+	 * @param sensorvalue
+	 */
+	private long now;
+	public void ProcessAlarm(long type,long sensorvalue) {
+		// TODO Auto-generated method stub
+		//TCPClient.this.Client_Send(CLIENT_COMMAND_CLEARINT);
+		Handler UIhandler = messageHandler;
+		now = System.currentTimeMillis();
+
+        if(UIhandler!=null){
+	        Message childMsg = UIhandler.obtainMessage();
+	        /* 安防警告 15分钟之内不再触发 */
+			if(MyClientDemo.secureSW && (TCPClient.prev + 15*60*1000) < now){
+				TCPClient.prev = now;
+System.out.println("ProcessAlarm \t:警告！！");
+				
+		        childMsg.arg1 = MyClientDemo.UI_MESG_ALARM;
+		        childMsg.obj = "智能家居系统收到警告！来自传感器：" + SENSORTYPESTR[(int) type];
+	        	UIhandler.sendMessage(childMsg);
+		        
+			}
+			
+        	if(MyClientDemo.doorTipsSW){
+        		childMsg.arg1 = MyClientDemo.UI_MESG_TIP;
+        		childMsg.obj  = "智能家居出门提醒："+AlarmListenerService.notificationShowStr;
+        		UIhandler.sendMessage(childMsg);
+			}
+        }
+	}
 
 	private NotificationManager manager;
 	private Notification notification;
@@ -625,7 +748,8 @@ public class MyClientDemo extends Activity {
 		PendingIntent pendIntent = PendingIntent.getActivity(MyClientDemo.this, 0, intent, 0);  
     	
 		nb = new Notification.Builder(MyClientDemo.this)
-         .setContentTitle("智能家具系统检测到危险！")
+         .setDefaults((Notification.DEFAULT_SOUND))
+         .setContentTitle("收到来自智能家居的消息")
          .setContentText("来自传感器：")
          .setSmallIcon(android.R.drawable.ic_menu_today)
          .setContentIntent(pendIntent);

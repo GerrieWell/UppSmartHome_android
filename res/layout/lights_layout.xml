@@ -8,11 +8,12 @@
         android:id="@+id/textView1"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="灯光组"
+        android:text="开关"
         android:textAppearance="?android:attr/textAppearanceLarge" />
 
     <Spinner
         android:id="@+id/lightsspinner"
+        android:visibility="invisible"
         android:layout_width="match_parent"
         android:layout_height="wrap_content" />
 
@@ -34,7 +35,7 @@
                     android:id="@+id/textView2"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="灯光1"
+                    android:text="灯光0"
                     android:textAppearance="?android:attr/textAppearanceMedium" />
 
                 <ToggleButton
@@ -51,7 +52,7 @@
                     android:id="@+id/textView3"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="灯光2"
+                    android:text="灯光1"
                     android:textAppearance="?android:attr/textAppearanceMedium" />
 
                 <ToggleButton
@@ -68,13 +69,15 @@
                     android:id="@+id/textView32"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="灯光3"
+                    android:text="灯光2"
+                    android:visibility="invisible"
                     android:textAppearance="?android:attr/textAppearanceMedium" />
 
                 <ToggleButton
                     android:id="@+id/toggleButton3"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:visibility="invisible"
                     android:text="ToggleButton" />
             </LinearLayout>
                         <LinearLayout
@@ -85,13 +88,15 @@
                     android:id="@+id/textView5"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="灯光4"
+                    android:visibility="invisible"
+                    android:text="灯光3"
                     android:textAppearance="?android:attr/textAppearanceMedium" />
 
                 <ToggleButton
                     android:id="@+id/toggleButton4"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:visibility="invisible"
                     android:text="ToggleButton" />
             </LinearLayout>
         </LinearLayout>
@@ -108,7 +113,7 @@
                     android:id="@+id/textView6"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="灯光5"
+                    android:text="灯光4"
                     android:textAppearance="?android:attr/textAppearanceMedium" />
 
                 <ToggleButton
@@ -125,7 +130,7 @@
                     android:id="@+id/textView7"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="灯光6"
+                    android:text="灯光5"
                     android:textAppearance="?android:attr/textAppearanceMedium" />
 
                 <ToggleButton
@@ -142,7 +147,7 @@
                     android:id="@+id/textView8"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="灯光7"
+                    android:text="继电器6"
                     android:textAppearance="?android:attr/textAppearanceMedium" />
 
                 <ToggleButton
@@ -159,7 +164,7 @@
                     android:id="@+id/textView9"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="灯光8"
+                    android:text="电磁阀7"
                     android:textAppearance="?android:attr/textAppearanceMedium" />
 
                 <ToggleButton

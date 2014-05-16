@@ -46,10 +46,15 @@ public class HelpUtils {
 	  * @param b 字节数组
 	  * @return 生成的int数据
 	  */
-	 public static long StrToLong(byte[] b){
+	 public static long bytesToLong(byte[] b){
 	  return (((long)b[3]) << 24) + (((long)b[2]) << 16) + (((long)b[1]) << 8) + b[0];
 	 }
-	 
+	 public static long bytesToLong2(byte[] b){
+		  return ((((long)b[0]) << 24)&0xff000000) 
+				  + ((((long)b[1]) << 16)&0xff0000)
+				  + ((((long)b[2]) << 8)&0xff00)
+				  + ((long)b[3]&0xff);
+	 }
 	public static byte[] longToByte(long number) {
 		long temp = number;
 		byte[] b = new byte[8];
