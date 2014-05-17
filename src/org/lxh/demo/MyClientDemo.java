@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Iterator;
+import java.util.List;
 
 import zigbeeNet.DeviceInfo;
 import zigbeeNet.NodeInfo;
@@ -15,11 +16,14 @@ import android.app.PendingIntent;
 import android.app.TimePickerDialog;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
+import android.speech.RecognizerIntent;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -59,7 +63,7 @@ public class MyClientDemo extends Activity {
 			,CATE_EE=(byte) 0xee,CATE_ED=(byte)0xeb,FLAG_REMOTE_STATE_CATE_TODO=(byte)0xb0;
 	static byte CATE_WIRING=(byte) 0xa0,CATE_IR=(byte)0xa4;
 	public static String IP="10.0.136.142";
-	public static int PORT=7838,qtPORT = 8686;//7839;
+	public static int PORT=7838,qtPORT = 7070;//7839;
 	public static final String ALARM_LISTENER_ACTION="ALARMLISTENERSERVICE";
 	public static final int UI_MESG_ALARM = 1;
 	public static final int UI_MESG_UPDATE_TOPO = 2;
@@ -123,7 +127,7 @@ public class MyClientDemo extends Activity {
 		
 		adapter=new ArrayAdapter<String>(this,android.R.layout.simple_spinner_item,wirings); 		//设置下拉列表风格 
 		adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item); 		//将adapter添加到spinner中 
-		wiRingSpin.setAdapter(adapter); 		//添加Spinner事件监听 
+		//wiRingSpin.setAdapter(adapter); 		//添加Spinner事件监听 
 		//some test
 		((Button) super.findViewById(R.id.button2)).setOnClickListener(new OnClickListener() {
 			
@@ -160,7 +164,7 @@ public class MyClientDemo extends Activity {
 			public void onClick(View v) {
 				// TODO Auto-generated method stub
 				byte temp;
-				cut_P6=lightStates[0];
+/*				cut_P6=lightStates[0];
 				temp=cut_P6;
 				int ret=0;
 				for(int i=0;i<8;i++){
@@ -172,7 +176,7 @@ public class MyClientDemo extends Activity {
 						light[i].setChecked(false);
 					checkChangeble=true;
 					temp >>>= 1;
-				}
+				}*/
 				popWin.showAtLocation(button_lights, Gravity.CENTER, 0, 0);
 			}
 		});
@@ -306,10 +310,6 @@ public class MyClientDemo extends Activity {
 			public void onClick(View v) {
 				// TODO Auto-generated method stub
 				TCPClient.prev = 0;
-/*				if(secureSW){
-					secureSW = true;
-				}else
-					secureSW =false;*/
 				secureSW = !secureSW;
 				buttonSecure.setText("安防系统"+sw[HelpUtils.bToI(secureSW)]);
 			}
@@ -338,6 +338,7 @@ public class MyClientDemo extends Activity {
 		/*for test*/
 		long a = -1626775014L;
 		initNotification();
+		initVoiceRecognition();
 		//new Long(a).byteValue();
 		//byte[] teset = longToByte(a);
 		//System.out.println("a.length = "+a. + "b.length");
@@ -370,37 +371,6 @@ public class MyClientDemo extends Activity {
 		lightAdapter=new ArrayAdapter<String>(MyClientDemo.this,android.R.layout.simple_spinner_item,MyClientDemo.this.light_str); 		//设置下拉列表风格 
 		lightAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item); 		//将adapter添加到spinner中 
 		lightGroups.setAdapter(lightAdapter); 		//添加Spinner事件监听 
-/*		lightGroups.setOnItemSelectedListener(new Spinner.OnItemSelectedListener() {
-
-			@Override
-			public void onItemSelected(AdapterView<?> parent, View view,
-					int position, long id) {
-				// TODO Auto-generated method stub
-				byte temp;
-				cut_P6=lightStates[position];
-				temp=cut_P6;
-				int ret=0;
-				for(int i=0;i<8;i++){
-					ret=((temp&0xff)&((int)0x1));
-					checkChangeble=false;
-					if(ret>=1){
-						light[i].setChecked(true);
-					}else
-						light[i].setChecked(false);
-					checkChangeble=true;
-					temp >>>= 1;
-				}
-				ret=(temp&((byte)0x1));
-			}
-
-			@Override
-			public void onNothingSelected(AdapterView<?> parent) {
-				// TODO Auto-generated method stub
-				
-			}
-
-
-		});*/
 		((Button)popView.findViewById(R.id.pop_back)).setOnClickListener(new OnClickListener() {
 			
 			@Override
@@ -478,29 +448,14 @@ public class MyClientDemo extends Activity {
 	}*/
 
 	public void lightCheckChange(int lightIndex ,boolean isChecked){
-		int a = 0,b;
-		/*int lightGroupIndex;
-		lightGroupIndex=lightGroups.getSelectedItemPosition();
-		a=(int)lightStates[lightGroupIndex];
-		b=(int)~(1<<lightIndex);
-		a&=0xff;
-		a=a&b;
-		lightGroupIndex&=0xff;
-		if(isChecked){
-			//router1_P6=(byte)((int)router1_P6))|(1<<i);
-			a=a|(1<<lightIndex);
-			a&=0xff;
-		}
-		lightStates[lightGroupIndex]=(byte)a;
-		byte cmd1[] = {(byte) MyClientDemo.CATE_EF,0x05,MyClientDemo.CATE_LIGHT,(byte)lightGroupIndex,lightStates[lightGroupIndex]};*/
-		//MyClientDemo.sendCmdByTCP(MyClientDemo.this,cmd1, "OK");
+		int a = 0;
 		for(int i = 0 ;i<8;i++){
 			a|=HelpUtils.bToI(light[i].isChecked())<<i;
 		}
 		MyClientDemo.state = a;
 		System.out.println("a is "+ Integer.toBinaryString(a));
 		if(client!=null)
-			client.Client_Send(TCPClient.CLIENT_COMMAND_SETSENSOR);
+			client.clientSendCommand(TCPClient.CLIENT_COMMAND_SETSENSOR);
 	}
 	public static long addr = 0,state = 0;
 	
@@ -528,11 +483,11 @@ public class MyClientDemo extends Activity {
 									if(client == null)
 										Toast.makeText(MyClientDemo.this, "Server error", Toast.LENGTH_SHORT).show();
 									Thread.sleep(1000);//等待初始化完成
-									client.Client_Send(TCPClient.CLIENT_COMMAND_GETNWKINFO);
+									client.clientSendCommand(TCPClient.CLIENT_COMMAND_GETNWKINFO);
 									while(client!=null){
 										if(client!=null){
-											client.Client_Send(TCPClient.CLIENT_COMMAND_GETNWKINFO);
-											//client.Client_Send(TCPClient.CLIENT_COMMAND_CLEARINT);
+											client.clientSendCommand(TCPClient.CLIENT_COMMAND_GETNWKINFO);
+											//client.clientSendCommand(TCPClient.CLIENT_COMMAND_CLEARINT);
 										}
 										Thread.sleep(2000);
 									}
@@ -574,13 +529,21 @@ public class MyClientDemo extends Activity {
 	public static void toastShow(Context c,String str){
 		Toast.makeText(c, str, Toast.LENGTH_SHORT).show();
 	}
-
+	public final static String SER_KEY	 = "com.lxh.demo.ser";
+	public final static String SER_STATE = "com.lxh.demo.STATE";
+	public final static String SER_ADDR  = "com.lxh.demo.ADDR";
+	
 	private class VoiceRecognitionListener implements OnClickListener{
-
+		
 		@Override
 		public void onClick(View v) {
 			// TODO Auto-generated method stub
 			Intent i =new Intent(MyClientDemo.this,VoiceRecognition.class);
+			Bundle b = new Bundle();
+			b.putSerializable(SER_KEY, client);
+			b.putLong(SER_STATE, state);
+			b.putLong(SER_ADDR, addr);
+			i.putExtras(b);
 			MyClientDemo.this.startActivity(i);
 		}
 		
@@ -643,14 +606,14 @@ public class MyClientDemo extends Activity {
 		while(nodeInfo.hasNext()){
 			NodeInfo ni = nodeInfo.next();
 			DeviceInfo di = ni.devinfo;
-			System.out.println("devInfo.sensortype"+ di.sensortype);
-			System.out.println("test  di.devtype:"+  di.devtype);
+			//System.out.println("devInfo.sensortype"+ di.sensortype);
+			//System.out.println("test  di.devtype:"+  di.devtype);
 			if(di.devtype==1 || di.devtype == 2)
 				show= show + new String("节点" + ni.num+":\t设备类型："+DEVTYPESTR[(int) di.devtype]+"\t传感器类型："+SENSORTYPESTR[(int) di.sensortype]);
 /*sensor process */				
-			if(di.sensortype == 2||di.sensortype ==1){
+			if(di.sensortype == SENSORTYPE_RF||di.sensortype ==SENSORTYPE_SMOG){
 				show = show +"\t传感器状态："+SENSORSTATUS[(int) di.sensorvalue];
-				System.out.println("LINE 455 \t # di.sensorvalue"+ di.sensorvalue);
+System.out.println("LINE 455 \t # di.sensorvalue"+ di.sensorvalue);
 				if(di.sensorvalue == 1){//警告
 					ProcessAlarm(di.sensortype,di.sensorvalue);
 				}
@@ -667,14 +630,16 @@ public class MyClientDemo extends Activity {
 			    float rh_true=(tempValue-25)*(T1+T2*humiValue)+rh_lin; //calc. Temperature compensated humidity [%RH]
 				humiValue = rh_true;
 				System.out.println("float is "+tempValue +tmp[0]+" " + tmp[1]);
-				show = show + new String("\t温度" + tempValue +"\t湿度："+humiValue);
+				String textShow = new String("\t温度" + tempValue +"\t湿度："+humiValue);
+				textHumi.setText(textShow);
+				show = show + textShow;
 				//float t=*p_temperature; // t: Temperature [Ticks] 14 Bit
 			}else if(di.sensortype == SENSORTYPE_PINS){
 				
 				System.out.println("pins value is "+ Long.toHexString(di.sensorvalue));
 				addr = di.nwkaddr;
-				show = show + new String("pins1:"+(di.sensorvalue & 0xff) +"\tpins2 : "+ (di.sensorvalue & 0xff00));
 				int temp = (int) (di.sensorvalue & 0x0000000000ff0000)>>16;
+				show = show + new String("pin:"+"0x"+Long.toHexString(temp));
 System.out.println("temp : "+ Integer.toHexString(temp).toString());
 				for(int i=0;i<8;i++){		
 					int ret=((temp&0xff)&((int)0x1));
@@ -756,7 +721,72 @@ System.out.println("ProcessAlarm \t:警告！！");
         notification = nb.getNotification();
 	}
     
+    private static final int VOICE_RECOGNITION_REQUEST_CODE = 1234;
+    private void initVoiceRecognition(){
+    	Button speakButton = (Button) findViewById(R.id.mode);
+        // Check to see if a recognition activity is present
+        PackageManager pm = getPackageManager();
+        List<ResolveInfo> activities = pm.queryIntentActivities(
+                new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH), 0);
+        if (activities.size() != 0) {
+            speakButton.setOnClickListener(new VoiceRecognitionsListener());
+        } else {
+            speakButton.setEnabled(false);
+            speakButton.setText("Recognizer not present");
+        }
+    }
+    
+    private class VoiceRecognitionsListener implements OnClickListener{
+		@Override
+		public void onClick(View v) {
+			// TODO Auto-generated method stub
+	        Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+	        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+	                RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+	        intent.putExtra(RecognizerIntent.EXTRA_PROMPT, "Speech recognition demo");
+	        startActivityForResult(intent, VOICE_RECOGNITION_REQUEST_CODE);
+		}
+    	
+    }
+    /**
+     * Handle the results from the recognition activity.
+     */
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == VOICE_RECOGNITION_REQUEST_CODE && resultCode == RESULT_OK) {
+            // Fill the list view with the strings the recognizer thought it could have heard
+            ArrayList<String> matches = data.getStringArrayListExtra(
+                    RecognizerIntent.EXTRA_RESULTS);
+            /*mList.setAdapter(new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1,
+                    matches));*/
+            for(String tmp:matches){
+            	System.out.println("tmp :"+ tmp);
+            	if(tmp.contains("开灯")){
+//            	if(tmp.startsWith("开灯")){
+            		System.out.println("onActivityResult open lights");
+            		if(client!=null){
+            			
+            			state = 0xff;
+            			client.clientSendCommand(TCPClient.CLIENT_COMMAND_SETSENSOR);
+            		}
+            		return;
+            	}else if(tmp.equals("关灯")){
+            			//MyClientDemo.sendCmdByTCP(VoiceRecognition.this,cmd,"OK");
+            		state = 0;
+            		if(client!=null)
+            			client.clientSendCommand(TCPClient.CLIENT_COMMAND_SETSENSOR);
+            		return;
+            	}else{
+            		Toast.makeText(MyClientDemo.this, "未识别指令", Toast.LENGTH_SHORT).show();
+            	}
+            }
+        }
+
+        super.onActivityResult(requestCode, resultCode, data);
+    }
 }
+
+
 
 
 /**

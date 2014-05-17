@@ -36,7 +36,7 @@
                 android:id="@+id/mode"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="打开外出模式" />
+                android:text="语音识别" />
 
             <Button
                 android:id="@+id/button_alarm"
@@ -61,6 +61,7 @@
                 android:id="@+id/text_temp_fix"
                 android:layout_width="wrap_content"
                 android:layout_height="match_parent"
+                android:visibility="invisible"
                 android:text="temp:" 
                 />
             
@@ -68,18 +69,20 @@
                 android:id="@+id/text_temp"
                 android:layout_width="wrap_content"
                 android:layout_height="match_parent"
+                android:visibility="invisible"
                 android:text="temp:" />
             <TextView
                 android:id="@+id/text_humi_fix"
                 android:layout_width="wrap_content"
                 android:layout_height="match_parent"
+                android:visibility="invisible"
                 android:text="humi:"/>
             
             <TextView
                 android:id="@+id/text_humi"
                 android:layout_width="wrap_content"
                 android:layout_height="match_parent"
-                android:text="temp:"/>
+                android:text="humi:"/>
         </LinearLayout>
 <!-- 
         <Spinner

@@ -88,7 +88,7 @@ public class RealPicActivity extends Activity {
 				}
 				Bitmap bitmap = null;    
 				String path=null;
-				path=AlarmListenerService.dir.getAbsolutePath()+"/temp"+AlarmListenerService.imgShowNum+".png";
+				path=AlarmListenerService.dir.getAbsolutePath()+"/temp"+AlarmListenerService.imgShowNum+".jpg";
 System.out.println("pervious path is :"+path);
 				bitmap=BitmapFactory.decodeFile(path);
 				if(!(bitmap==null))

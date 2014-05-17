@@ -31,6 +31,8 @@ public class VoiceRecognition extends Activity implements OnClickListener {
     private ListView mList;
     private HashMap<String, String> siringIndex[]=new HashMap[7];
     public String number[]={"一","二","三","四","五","六","七"};
+    public TCPClient client;
+    
     /**
      * Called with the activity is first created.
      */
@@ -61,6 +63,8 @@ public class VoiceRecognition extends Activity implements OnClickListener {
             speakButton.setEnabled(false);
             speakButton.setText("Recognizer not present");
         }
+        //get Clinet
+        client = (TCPClient)getIntent().getSerializableExtra(MyClientDemo.SER_KEY);
     }
 
     /**
@@ -100,36 +104,20 @@ public class VoiceRecognition extends Activity implements OnClickListener {
             	byte cmd[] = {MyClientDemo.CATE_EF,0x05,(byte) 0xa4,0,0};
             	boolean swbegin=tmp.startsWith("打开电器");
             	boolean swend=tmp.startsWith("关闭电器");
-            	if(tmp.equals("开灯")){
-            		cmd[2]=MyClientDemo.CATE_LIGHT;
-            		cmd[4]=(byte) 0xff;
-            		for(byte i=0;i<2;i++){//MyClientDemo.lightGroupNum
-            			cmd[3]=i;
-            			//MyClientDemo.sendCmdByTCP(VoiceRecognition.this,cmd,"OK");
+            	System.out.println("tmp: "+ tmp);
+            	if(tmp.contains("开灯")){
+//            	if(tmp.startsWith("开灯")){
+            	System.out.println("onActivityResult open lights");
+            		if(client!=null){
+            			
+            			MyClientDemo.state = 0xff;
+            			client.clientSendCommand(TCPClient.CLIENT_COMMAND_SETSENSOR);
             		}
             	}else if(tmp.equals("关灯")){
-            		cmd[2]=MyClientDemo.CATE_LIGHT;
-            		cmd[4]=0;
-            		for(byte i=0;i<MyClientDemo.lightGroupNum;i++){
-            			cmd[3]=i;
             			//MyClientDemo.sendCmdByTCP(VoiceRecognition.this,cmd,"OK");
-            		}
-            	}else if(swbegin||swend){
-            		cmd[2]=MyClientDemo.CATE_WIRING;
-            		if(swbegin)
-            			cmd[4]=1;
-            		else
-            			cmd[4]=0;
-            		String wStr=tmp.substring(4,5);
-            		for(byte i=0;i<7;i++){
-            			wStr=siringIndex[i].get(wStr);
-            			if(wStr==null)
-            				return;
-            			else{
-            				cmd[3]=i;
-            				//MyClientDemo.sendCmdByTCP(VoiceRecognition.this,cmd,"OK");
-            			}
-            		}
+            		MyClientDemo.state = 0;
+            		if(client!=null)
+            			client.clientSendCommand(TCPClient.CLIENT_COMMAND_SETSENSOR);
             	}else{
             		Toast.makeText(VoiceRecognition.this, "未识别指令", Toast.LENGTH_SHORT).show();
             	}

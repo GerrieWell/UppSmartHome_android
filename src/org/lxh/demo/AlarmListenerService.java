@@ -175,7 +175,7 @@ public class AlarmListenerService extends Service {
 		 dir=new File(SDPATH+"zigbeeTCP/");
 		 if(!dir.exists())
 			 dir.mkdir();
-		 path=dir.getAbsolutePath()+"/temp"+ImgNum+".png";
+		 path=dir.getAbsolutePath()+"/temp"+ImgNum+".jpg";
 		 File file=new File(path);
 		 imgShowNum=ImgNum;
 		 ImgNum++;
@@ -224,13 +224,14 @@ public class AlarmListenerService extends Service {
 			count = is.read(tmp);
 			long t = 0;
 			for(int i =0;i<4;i++){
+				
 				t = (long)tmp[i] &0xff;
 				System.out.println("c : "+t);
 			}
 			if(count !=4)
 				return;
 			else{
-				size = (long)HelpUtils.bytesToLong2(tmp);
+				size = (long)HelpUtils.bytesToLong(tmp);
 				System.out.println("size is "+ size);
 			}
 			buffer = new byte[1360];

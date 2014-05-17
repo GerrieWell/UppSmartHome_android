@@ -1,6 +1,7 @@
 package org.lxh.demo;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
@@ -29,7 +30,7 @@ import android.util.Log;
  * @time 下午03:33:26
  * @version 1.00
  */
-public class TCPClient {
+public class TCPClient implements Serializable{
 	
 	public static long prev = 0;
 	
@@ -46,6 +47,7 @@ public class TCPClient {
 	private int hostListenningPort;
 	
 	//android stuff
+	private static final long serialVersionUID = -7060210544600464481L;
 	private Handler UIhandler;
 	private Context c;
 	
@@ -188,7 +190,7 @@ public class TCPClient {
 		return false;
 	}*/
 	
-	public boolean Client_Send(long command){
+	public boolean clientSendCommand(long command){
 		if(mSendHandler == null || tw.isAlive()=="no")
 			return false;
         Message childMsg = mSendHandler.obtainMessage();
@@ -433,7 +435,7 @@ public class TCPClient {
 				NodeInfo firstNodeInfo = new NodeInfo();
 				DeviceInfo firstDevInfo = new DeviceInfo();
 				firstDevInfo.nwkaddr = node[0];
-System.out.println("nwkaddr is "+firstDevInfo.nwkaddr);
+//System.out.println("nwkaddr is "+firstDevInfo.nwkaddr);
 				firstDevInfo.macaddr = new long[8];
 				for(int j=0;j<=7;j++)
 					firstDevInfo.macaddr[j] = node[j+1];
@@ -448,6 +450,13 @@ System.out.println("nwkaddr is "+firstDevInfo.nwkaddr);
 //System.out.println("get node : "+ firstNodeInfo.num);
 				firstNodeInfo.devinfo	  		= firstDevInfo;
 				nodeInfos.add(firstNodeInfo);//firstNodeInfo.next = null;
+/*果然错了 处理应该放在接受线程，ui主线程仅仅负责更新ui！ （虽然一个个控件加到handler麻烦了点，但是可以封装一个类出来）*/
+				if(firstDevInfo.sensortype == MyClientDemo.SENSORTYPE_RF||firstDevInfo.sensortype == MyClientDemo.SENSORTYPE_SMOG){
+					if(firstDevInfo.sensorvalue >= 1)
+		System.out.println("clear interrupt");
+						TCPClient.this.clientSendCommand(TCPClient.CLIENT_COMMAND_CLEARINT);
+				}
+				
 				//为什么要 -3
 				for(i=1;i<(count-3)/18;i++){//2+18  i=
 					newNodeInfo = new NodeInfo();
@@ -462,6 +471,7 @@ System.out.println("nwkaddr is "+firstDevInfo.nwkaddr);
 					devInfo.parentnwkaddr = node[11+18*i];
 					devInfo.sensortype = 	node[12+18*i];
 					devInfo.sensorvalue = 	node[13+18*i];
+System.out.println("sensorvalue is :"+ node[13+18*i]);
 					//注意没有14
 					devInfo.status = 		node[15+18*i];
 					newNodeInfo.row = 			(byte) node[16+18*i];
@@ -469,6 +479,11 @@ System.out.println("nwkaddr is "+firstDevInfo.nwkaddr);
 //System.out.println("get node : "+ newNodeInfo.num);
 					newNodeInfo.devinfo	  = devInfo;
 					nodeInfos.add(newNodeInfo);//newNodeInfo.next = null;
+					if(devInfo.sensortype == MyClientDemo.SENSORTYPE_RF||devInfo.sensortype == MyClientDemo.SENSORTYPE_SMOG){
+						if(devInfo.sensorvalue >= 1)
+			System.out.println("clear interrupt");
+							TCPClient.this.clientSendCommand(TCPClient.CLIENT_COMMAND_CLEARINT);
+					}
 				}
 			}
 			//@wei 这个client随activity初始化。
