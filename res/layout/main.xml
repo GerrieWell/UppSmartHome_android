@@ -108,10 +108,10 @@
                     android:text="出门备忘" />
 
                 <Button
-                    android:id="@+id/test"
+                    android:id="@+id/door_rfid"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="语音识别" />
+                    android:text="门禁系统" />
             </LinearLayout>
 
             <LinearLayout

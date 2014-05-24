@@ -10,11 +10,14 @@ import zigbeeNet.DeviceInfo;
 import zigbeeNet.NodeInfo;
 import android.app.Activity;
 import android.app.AlarmManager;
+import android.app.AlertDialog;
+import android.app.Dialog;
 import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.TimePickerDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
@@ -69,12 +72,13 @@ public class MyClientDemo extends Activity {
 	public static final int UI_MESG_UPDATE_TOPO = 2;
 	public static final int UI_MESG_TIP		=3;
 	public final static String[] DEVTYPESTR 	= {"无","蓝色","green"};
-	public final static String[] SENSORTYPESTR 	= {"温湿度","人体红外","可然气体","none1","none2","引脚信息"};
+	public final static String[] SENSORTYPESTR 	= {"温湿度","人体红外","可然气体","none1","none2","引脚信息","six","门禁"};
 	public final static String[] SENSORSTATUS 	= {"正常","警告"};
 	public final static long SENSORTYPE_WENSHI =0;
 	public final static long SENSORTYPE_RF		=1;
 	public final static long SENSORTYPE_SMOG	=2;
 	public final static long SENSORTYPE_PINS	=5;
+	public final static long SENSORTYPE_RFID =7;
 /*tools*/
 	Calendar calendar;
 	public Handler messageHandler;
@@ -123,7 +127,7 @@ public class MyClientDemo extends Activity {
 		realPic=(Button)findViewById(R.id.real_time_pic);
 		//mp=new monitorPicListener();
 		
-		findViewById(R.id.test).setOnClickListener(new VoiceRecognitionListener());
+		findViewById(R.id.door_rfid).setOnClickListener(new TestButtonListener());
 		
 		adapter=new ArrayAdapter<String>(this,android.R.layout.simple_spinner_item,wirings); 		//设置下拉列表风格 
 		adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item); 		//将adapter添加到spinner中 
@@ -156,7 +160,6 @@ public class MyClientDemo extends Activity {
 
 			}
 		});
-
 		//灯光控制listneer
 		this.button_lights.setOnClickListener(new OnClickListener() {
 			
@@ -533,22 +536,24 @@ public class MyClientDemo extends Activity {
 	public final static String SER_STATE = "com.lxh.demo.STATE";
 	public final static String SER_ADDR  = "com.lxh.demo.ADDR";
 	
-	private class VoiceRecognitionListener implements OnClickListener{
+	private class TestButtonListener implements OnClickListener{
 		
 		@Override
 		public void onClick(View v) {
 			// TODO Auto-generated method stub
-			Intent i =new Intent(MyClientDemo.this,VoiceRecognition.class);
-			Bundle b = new Bundle();
-			b.putSerializable(SER_KEY, client);
-			b.putLong(SER_STATE, state);
-			b.putLong(SER_ADDR, addr);
-			i.putExtras(b);
-			MyClientDemo.this.startActivity(i);
+			//client 的所有子类也都要serializable  此方法不通
+/*			Intent i =new Intent(MyClientDemo.this,VoiceRecognition.class);
+			MyClientDemo.this.startActivity(i);*/
+			//挂失这张卡
+			LayoutInflater inflater2=LayoutInflater.from(MyClientDemo.this);
+			View popView2=inflater2.inflate(R.layout.card_manager, null);
+			Dialog popwin=new AlertDialog.Builder(MyClientDemo.this).setView(popView2).create();
+			
+			popwin.show();
 		}
 		
 	}
-
+	//private void 
 
     /**
     *得到Exception所在代码的行数
@@ -651,6 +656,10 @@ System.out.println("temp : "+ Integer.toHexString(temp).toString());
 					checkChangeble=true;
 					temp >>>= 1;
 				}
+			}else if(di.sensortype == SENSORTYPE_RFID){
+				
+			}else{
+				show = show +new String("传感器值："+ di.sensorvalue);
 			}
 /*sensor process END*/	
 			show = show +"\n";
@@ -664,6 +673,7 @@ System.out.println("temp : "+ Integer.toHexString(temp).toString());
 	 * @param sensorvalue
 	 */
 	private long now;
+	private int doorTipCount =0;
 	public void ProcessAlarm(long type,long sensorvalue) {
 		// TODO Auto-generated method stub
 		//TCPClient.this.Client_Send(CLIENT_COMMAND_CLEARINT);
@@ -684,9 +694,14 @@ System.out.println("ProcessAlarm \t:警告！！");
 			}
 			
         	if(MyClientDemo.doorTipsSW){
-        		childMsg.arg1 = MyClientDemo.UI_MESG_TIP;
-        		childMsg.obj  = "智能家居出门提醒："+AlarmListenerService.notificationShowStr;
-        		UIhandler.sendMessage(childMsg);
+        		doorTipCount++;
+        		if(doorTipCount >=2){
+	        		childMsg.arg1 = MyClientDemo.UI_MESG_TIP;
+	        		childMsg.obj  = "智能家居出门提醒："+AlarmListenerService.notificationShowStr;
+	        		UIhandler.sendMessage(childMsg);
+	        		doorTipCount = 0;
+	        	}
+        		
 			}
         }
 	}
