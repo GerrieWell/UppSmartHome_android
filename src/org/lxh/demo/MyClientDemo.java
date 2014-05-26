@@ -17,8 +17,9 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.TimePickerDialog;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.content.SharedPreferences.Editor;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.graphics.Color;
@@ -52,20 +53,23 @@ import android.widget.ToggleButton;
 //}
 
 public class MyClientDemo extends Activity {
+	//view
 	private Button tcp_connect = null;									// 定义按钮组件
 	private TextView info = null;								// 定义文本组件
-	private Button mode =null,buttonGate=null,buttonAlarm=null,button_lights=null,realPic=null,buttonSecure=null;
+	private Button mode =null,buttonGate=null,buttonAlarm=null,button_lights=null,realPic=null,buttonSecure=null;	
+	private Button butReg,butLogout;
+	private EditText etAlias;
 	private TextView smInfoText;
-	private Spinner wiRingSpin = null,lightGroups=null;
+	private Spinner wiRingSpin = null,lightGroups=null;/*
 	private ArrayAdapter<String> adapter,lightAdapter,eventAdapter;
 	public static final String[] wir_str_temp={"电器A","电器B","电器C","电器D","电器E","电器F","点击开关电器"};
 	private static final String[] wirings={"电器A","电器B","电器C","电器D","电器E","电器F","点击开关电器"};
-	private static final String[] light_str={"灯光组A","灯光组B"};
+	private static final String[] light_str={"灯光组A","灯光组B"};*/
 	private static final String[] sw={"(关闭)","(打开)"};
-	public static final byte CATE_GATE=(byte) 0xa2,CATE_LIGHT=(byte) 0xa1,CATE_EF=(byte)0xef
-			,CATE_EE=(byte) 0xee,CATE_ED=(byte)0xeb,FLAG_REMOTE_STATE_CATE_TODO=(byte)0xb0;
+/*	public static final byte CATE_GATE=(byte) 0xa2,CATE_LIGHT=(byte) 0xa1,CATE_EF=(byte)0xef
+			,CATE_EE=(byte) 0xee,CATE_ED=(byte)0xeb,FLAG_REMOTE_STATE_CATE_TODO=(byte)0xb0;*/
 	static byte CATE_WIRING=(byte) 0xa0,CATE_IR=(byte)0xa4;
-	public static String IP="10.0.136.142";
+	public static String IP="10.0.136.249";
 	public static int PORT=7838,qtPORT = 7070;//7839;
 	public static final String ALARM_LISTENER_ACTION="ALARMLISTENERSERVICE";
 	public static final int UI_MESG_ALARM = 1;
@@ -79,6 +83,10 @@ public class MyClientDemo extends Activity {
 	public final static long SENSORTYPE_SMOG	=2;
 	public final static long SENSORTYPE_PINS	=5;
 	public final static long SENSORTYPE_RFID =7;
+	public final static String SER_KEY	 = "com.lxh.demo.ser";
+	public final static String SER_STATE = "com.lxh.demo.STATE";
+	public final static String SER_ADDR  = "com.lxh.demo.ADDR";
+
 /*tools*/
 	Calendar calendar;
 	public Handler messageHandler;
@@ -98,7 +106,6 @@ public class MyClientDemo extends Activity {
 	CheckBox out_todo_check1;
 	EditText out_todo_et;
 /*remote info*/	
-	private int str_num=6;
 	private TCPClient client;
 	public static int lightGroupNum=2;
 	int wir_sws[]={0,1,1,0,1,0,0};
@@ -110,7 +117,10 @@ public class MyClientDemo extends Activity {
 	//static boolean mutexEnble=true;
 	static byte cut_P6=0;
 	static boolean checkChangeble=true;
-	private boolean alarmToggle = false;
+	private long gRegisteredID = 0L;
+	private boolean REGISTERING_FLAG = false;
+	private boolean REGISTERED_FLAG	 = false;
+	
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -129,10 +139,6 @@ public class MyClientDemo extends Activity {
 		
 		findViewById(R.id.door_rfid).setOnClickListener(new TestButtonListener());
 		
-		adapter=new ArrayAdapter<String>(this,android.R.layout.simple_spinner_item,wirings); 		//设置下拉列表风格 
-		adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item); 		//将adapter添加到spinner中 
-		//wiRingSpin.setAdapter(adapter); 		//添加Spinner事件监听 
-		//some test
 		((Button) super.findViewById(R.id.button2)).setOnClickListener(new OnClickListener() {
 			
 			@Override
@@ -166,20 +172,6 @@ public class MyClientDemo extends Activity {
 			@Override
 			public void onClick(View v) {
 				// TODO Auto-generated method stub
-				byte temp;
-/*				cut_P6=lightStates[0];
-				temp=cut_P6;
-				int ret=0;
-				for(int i=0;i<8;i++){
-					ret=((temp&0xff)&((int)0x1));
-					checkChangeble=false;
-					if(ret>=1){
-						light[i].setChecked(true);
-					}else
-						light[i].setChecked(false);
-					checkChangeble=true;
-					temp >>>= 1;
-				}*/
 				popWin.showAtLocation(button_lights, Gravity.CENTER, 0, 0);
 			}
 		});
@@ -190,11 +182,11 @@ public class MyClientDemo extends Activity {
 			public void onClick(View v) {
 				// TODO Auto-generated method stub
 				LayoutInflater inflater=LayoutInflater.from(MyClientDemo.this);
-				LayoutParams p=new LayoutParams(LayoutParams.MATCH_PARENT,LayoutParams.WRAP_CONTENT);
+				//LayoutParams p=new LayoutParams(LayoutParams.MATCH_PARENT,LayoutParams.WRAP_CONTENT);
 				alarmView=inflater.inflate(R.layout.alarm_layout, null);
 				alarmWin=new PopupWindow(MyClientDemo.this);
 				alarmWin.setContentView(alarmView);
-				alarmWin.setWidth(LayoutParams.FILL_PARENT);
+				alarmWin.setWidth(LayoutParams.MATCH_PARENT);
 				alarmWin.setHeight(LayoutParams.WRAP_CONTENT);
 				alarmWin.setAnimationStyle(android.R.style.Animation_Dialog);
 				alarmWin.setFocusable(true);
@@ -202,9 +194,6 @@ public class MyClientDemo extends Activity {
 				alarmSW=(ToggleButton) alarmView.findViewById(R.id.alarmtoggle);
 				event_wiring=(Spinner) alarmView.findViewById(R.id.event_wiring_spinner);
 				
-				eventAdapter=new ArrayAdapter<String>(MyClientDemo.this,android.R.layout.simple_spinner_item,wir_str_temp); 		//设置下拉列表风格 
-				eventAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item); 		//将adapter添加到spinner中 
-				event_wiring.setAdapter(eventAdapter); 		//添加Spinner事件监听 
 				
 				alarmSW.setOnCheckedChangeListener(new OnCheckedChangeListener() {
 					
@@ -321,7 +310,9 @@ public class MyClientDemo extends Activity {
 		fillLightView();
 		//fill_pic_view();
 		fillOutTodoView();
-		/*测试按钮*/
+		fillCardManView();
+		getperformance();
+		/*outtodo按钮*/
 		((Button)findViewById(R.id.out_todo)).setOnClickListener(new OnClickListener() {
 			
 			@Override
@@ -337,14 +328,10 @@ public class MyClientDemo extends Activity {
 		});
 		Looper looper =Looper.getMainLooper();
 		messageHandler = new MessageHandler(looper);
-
 		/*for test*/
-		long a = -1626775014L;
 		initNotification();
 		initVoiceRecognition();
-		//new Long(a).byteValue();
-		//byte[] teset = longToByte(a);
-		//System.out.println("a.length = "+a. + "b.length");
+		//savePerences(123L, "fa");
 	}
 
 
@@ -353,7 +340,15 @@ public class MyClientDemo extends Activity {
 		// TODO Auto-generated method stub
 		super.onResume();
 	}
-
+	@Override
+	protected void onDestroy() {
+		// TODO Auto-generated method stub				
+		tcp_connect.setText("TCP连接（断开）");
+		if(client!=null)
+			client.close();
+		client = null;
+		super.onDestroy();
+	}
 	/**
 	 * light listener
 	 * */
@@ -370,10 +365,7 @@ public class MyClientDemo extends Activity {
 		popWin.setHeight(LayoutParams.WRAP_CONTENT);
 		popWin.setAnimationStyle(android.R.style.Animation_Dialog);
 		popWin.setFocusable(true);
-		lightGroups=(Spinner)popView.findViewById(R.id.lightsspinner); 
-		lightAdapter=new ArrayAdapter<String>(MyClientDemo.this,android.R.layout.simple_spinner_item,MyClientDemo.this.light_str); 		//设置下拉列表风格 
-		lightAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item); 		//将adapter添加到spinner中 
-		lightGroups.setAdapter(lightAdapter); 		//添加Spinner事件监听 
+		
 		((Button)popView.findViewById(R.id.pop_back)).setOnClickListener(new OnClickListener() {
 			
 			@Override
@@ -417,7 +409,6 @@ public class MyClientDemo extends Activity {
 		outTodoWin.setHeight(LayoutParams.WRAP_CONTENT);
 		outTodoWin.setAnimationStyle(android.R.style.Animation_Dialog);
 		outTodoWin.setFocusable(true);
-		
 		out_todo_button1=(Button)outTodoView.findViewById(R.id.out_todo_button1); 
 		out_todo_check1=(CheckBox)outTodoView.findViewById(R.id.out_todo_check1);
 		//出门备忘
@@ -439,16 +430,6 @@ public class MyClientDemo extends Activity {
 		});
 		return ;
 	}
-	
-/*	public static String getGateWay() {
-		if (Netgear_WifiManager.wifiManager != null) 
-		{
-		DhcpInfo   dhcpInfo=Netgear_WifiManager.wifiManager.getDhcpInfo();
-					Log.e("gateway is ",
-							Netgear_IpAddressTranfer.long2ip(dhcpInfo.gateway));
-				}
-				return null;
-	}*/
 
 	public void lightCheckChange(int lightIndex ,boolean isChecked){
 		int a = 0;
@@ -460,8 +441,65 @@ public class MyClientDemo extends Activity {
 		if(client!=null)
 			client.clientSendCommand(TCPClient.CLIENT_COMMAND_SETSENSOR);
 	}
-	public static long addr = 0,state = 0;
+
+	private boolean savePerences(long uid,String alias){
+		SharedPreferences sharedPreferences = getSharedPreferences("zigbee_card", Context.MODE_PRIVATE);
+		Editor editor = sharedPreferences.edit();//获取编辑器
+		editor.putString("alias", alias);
+		editor.putLong("id", uid);
+		return editor.commit();
+	}
 	
+	private boolean getperformance(){
+		SharedPreferences preferences=getSharedPreferences("zigbee_card", Context.MODE_PRIVATE);
+		String name=preferences.getString("alias", "default");
+		System.out.println("name :"+name);
+		if(name.equals("default")){
+			REGISTERED_FLAG = false;
+			//无效  开门开关 注销按钮
+			//butLogout.setVisibility(View.INVISIBLE);
+			return false;
+		}
+		REGISTERED_FLAG = true;
+		etAlias.setText(name);
+		gRegisteredID =preferences.getLong("id", 0);
+		return true;
+	}
+	//@wei_dialogCard
+	Dialog dialogCard;
+	private void fillCardManView(){
+		LayoutInflater inflater2=LayoutInflater.from(MyClientDemo.this);
+		View cardView=inflater2.inflate(R.layout.card_manager, null);
+		butReg    = (Button) cardView.findViewById(R.id.button_register);
+		butLogout = (Button) cardView.findViewById(R.id.button_logout);
+		etAlias	  = (EditText)cardView.findViewById(R.id.edit_text_info);
+		ButtonCardListener bcl = new ButtonCardListener();
+		butReg.setOnClickListener(bcl);
+		butLogout.setOnClickListener(bcl);
+		dialogCard = new AlertDialog.Builder(MyClientDemo.this).setView(cardView).create();
+	}
+	
+	private class ButtonCardListener implements OnClickListener{
+
+		@Override
+		public void onClick(View v) {
+			// TODO Auto-generated method stub
+			if(v == butReg){
+				long[] tmp = {0x15L,0x10L,0x01L,0x0aL};
+				/*@wei_reg*/
+				REGISTERING_FLAG = true;
+				if(client!=null)
+					client.clientSendCommand(tmp);
+			}else if(v == butLogout){
+				long[] tmp = {0x15L,0x10L,0x02L,gRegisteredID,0x0aL};
+				if(client!=null)
+					client.clientSendCommand(tmp);
+			}
+		}
+		
+	}
+	
+	public static long addr = 0,state = 0;
 	
 	private class ConnectOnClickListenerImpl implements OnClickListener{
 
@@ -532,10 +570,7 @@ public class MyClientDemo extends Activity {
 	public static void toastShow(Context c,String str){
 		Toast.makeText(c, str, Toast.LENGTH_SHORT).show();
 	}
-	public final static String SER_KEY	 = "com.lxh.demo.ser";
-	public final static String SER_STATE = "com.lxh.demo.STATE";
-	public final static String SER_ADDR  = "com.lxh.demo.ADDR";
-	
+
 	private class TestButtonListener implements OnClickListener{
 		
 		@Override
@@ -544,12 +579,14 @@ public class MyClientDemo extends Activity {
 			//client 的所有子类也都要serializable  此方法不通
 /*			Intent i =new Intent(MyClientDemo.this,VoiceRecognition.class);
 			MyClientDemo.this.startActivity(i);*/
-			//挂失这张卡
-			LayoutInflater inflater2=LayoutInflater.from(MyClientDemo.this);
-			View popView2=inflater2.inflate(R.layout.card_manager, null);
-			Dialog popwin=new AlertDialog.Builder(MyClientDemo.this).setView(popView2).create();
-			
-			popwin.show();
+			//挂失这张卡 @wei_dialogCard1
+			dialogCard.show();
+			if(getperformance())
+				REGISTERED_FLAG = true;
+			else{
+				Toast.makeText(MyClientDemo.this, "performance first time", Toast.LENGTH_SHORT).show();
+				REGISTERED_FLAG = false;
+			}
 		}
 		
 	}
@@ -657,7 +694,18 @@ System.out.println("temp : "+ Integer.toHexString(temp).toString());
 					temp >>>= 1;
 				}
 			}else if(di.sensortype == SENSORTYPE_RFID){
-				
+				gRegisteredID = di.sensorvalue;
+				if(REGISTERING_FLAG){/*@wei_reg2*/
+					if(gRegisteredID!=0){
+						Toast.makeText(MyClientDemo.this, "新卡注册成功,填写别名后保存.",Toast.LENGTH_SHORT).show();
+						savePerences(di.sensorvalue, etAlias.getText().toString());
+					}else
+						Toast.makeText(MyClientDemo.this, ".",Toast.LENGTH_SHORT);
+					REGISTERING_FLAG = false;
+					//AlertDialog.Builder dialogReg = new AlertDialog.Builder(MyClientDemo.this).setTitle("标题").setMessage("确认注册").setPositiveButton("确定", );
+					//dialogReg.show();
+				}
+
 			}else{
 				show = show +new String("传感器值："+ di.sensorvalue);
 			}
@@ -668,12 +716,13 @@ System.out.println("temp : "+ Integer.toHexString(temp).toString());
     }
     
 	private int count;
-	/**
-	 * Unable to alarm in half of hour; 
-	 * @param sensorvalue
-	 */
 	private long now;
 	private int doorTipCount =0;
+	private NotificationManager manager;
+	private Notification notification;
+	private Notification.Builder nb;
+    private static final int VOICE_RECOGNITION_REQUEST_CODE = 1234;
+    
 	public void ProcessAlarm(long type,long sensorvalue) {
 		// TODO Auto-generated method stub
 		//TCPClient.this.Client_Send(CLIENT_COMMAND_CLEARINT);
@@ -706,9 +755,6 @@ System.out.println("ProcessAlarm \t:警告！！");
         }
 	}
 
-	private NotificationManager manager;
-	private Notification notification;
-	private Notification.Builder nb;
     public void initNotification() {
 		manager = (NotificationManager) this.getSystemService(Context.NOTIFICATION_SERVICE);
 		/*		// 创建一个Notification
@@ -735,8 +781,7 @@ System.out.println("ProcessAlarm \t:警告！！");
          .setContentIntent(pendIntent);
         notification = nb.getNotification();
 	}
-    
-    private static final int VOICE_RECOGNITION_REQUEST_CODE = 1234;
+    /*part of voiceRecognition*/    
     private void initVoiceRecognition(){
     	Button speakButton = (Button) findViewById(R.id.mode);
         // Check to see if a recognition activity is present

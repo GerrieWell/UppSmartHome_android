@@ -48,11 +48,11 @@ public class VoiceRecognition extends Activity implements OnClickListener {
         mList = (ListView) findViewById(R.id.list);
         
         //siringIndex[0]=new HashMap<String, String>();
-        for(int i=0;i<7;i++){
+/*        for(int i=0;i<7;i++){
         	siringIndex[i]=new HashMap<String, String>();
         	siringIndex[i].put(number[i],MyClientDemo.wir_str_temp[i]);
         }
-        
+        */
         // Check to see if a recognition activity is present
         PackageManager pm = getPackageManager();
         List<ResolveInfo> activities = pm.queryIntentActivities(
@@ -101,7 +101,7 @@ public class VoiceRecognition extends Activity implements OnClickListener {
             mList.setAdapter(new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1,
                     matches));
             for(String tmp:matches){
-            	byte cmd[] = {MyClientDemo.CATE_EF,0x05,(byte) 0xa4,0,0};
+/*            	byte cmd[] = {MyClientDemo.CATE_EF,0x05,(byte) 0xa4,0,0};*/
             	boolean swbegin=tmp.startsWith("打开电器");
             	boolean swend=tmp.startsWith("关闭电器");
             	System.out.println("tmp: "+ tmp);

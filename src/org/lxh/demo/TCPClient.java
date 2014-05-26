@@ -119,13 +119,13 @@ public class TCPClient implements Serializable{
 	 * @param message
 	 * @throws IOException
 	 */
-	public void sendMsg(String message) throws IOException {
+/*	private void sendMsg(String message) throws IOException {
 		ByteBuffer writeBuffer = ByteBuffer
-				.wrap(message.getBytes(/* "UTF-16" */));
+				.wrap(message.getBytes( "UTF-16" ));
 		socketChannel.write(writeBuffer);
-	}
+	}*/
 
-	public void write(byte[] tx,int offset,int len) throws IOException {
+	private void write(byte[] tx,int offset,int len) throws IOException {
 		// TODO Auto-generated method stub
 		ByteBuffer writeBuffer = ByteBuffer
 				.wrap(tx);
@@ -200,10 +200,20 @@ public class TCPClient implements Serializable{
         //Log.i(TAG, "Send a message to the child thread - " + (String)childMsg.obj);
         return true;
 	}
+	public boolean clientSendCommand(long[] command){
+		if(mSendHandler == null || tw.isAlive()=="no")
+			return false;
+        Message childMsg = mSendHandler.obtainMessage();
+        childMsg.obj = command;
+        childMsg.arg1 = TCPClientWriteThread.CLIENT_COMMAND_MUTI_ARGS;
+        mSendHandler.sendMessage(childMsg);
+        return true;
+	}
 	Handler mSendHandler;
 	public class TCPClientWriteThread implements Runnable{
 		protected static final int CLINET_COMMAND_CATE_SYSTEM = 0x100;
 		protected static final int CLIEN_COMMAND_EXIT_THREAD  = 0x101;
+		protected static final int CLIENT_COMMAND_MUTI_ARGS	  = 0x102;
 		TCPClient clientInner;
 		boolean alarmToggle = false;
 		private Thread t;
@@ -237,11 +247,23 @@ public class TCPClient implements Serializable{
 	            	}if(msg.arg1 == CLIEN_COMMAND_EXIT_THREAD){
 	            		this.getLooper().quit();
 	            		return;
+	            	}if(msg.arg1 == CLIENT_COMMAND_MUTI_ARGS){
+	            		long command[] = (long[]) msg.obj;
+	            		/*long num = msg.arg2;
+	            		long[] tmp = new long[num+2];
+	            		tmp[0]= 0x15L;
+	            		tmp[]*/
+	            		try {
+							writeLong(command);
+						} catch (IOException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+	            		return ;
 	            	}
 	            	
 	            	long command = ((Long) msg.obj).longValue();
 	        		long tmp[] = {0x15,command,0x0a};
-	        		
 	        		if(command == CLIENT_COMMAND_SETSENSOR){
 	        			tmp = new long[]{ 0x15,0x03,MyClientDemo.addr,MyClientDemo.state,0x0a};
 	        		}
