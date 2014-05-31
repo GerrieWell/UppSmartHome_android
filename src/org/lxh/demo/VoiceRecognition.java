@@ -64,7 +64,7 @@ public class VoiceRecognition extends Activity implements OnClickListener {
             speakButton.setText("Recognizer not present");
         }
         //get Clinet
-        client = (TCPClient)getIntent().getSerializableExtra(MyClientDemo.SER_KEY);
+        client = (TCPClient)getIntent().getSerializableExtra(HomeClientDemo.SER_KEY);
     }
 
     /**
@@ -110,12 +110,12 @@ public class VoiceRecognition extends Activity implements OnClickListener {
             	System.out.println("onActivityResult open lights");
             		if(client!=null){
             			
-            			MyClientDemo.state = 0xff;
+            			HomeClientDemo.state = 0xff;
             			client.clientSendCommand(TCPClient.CLIENT_COMMAND_SETSENSOR);
             		}
             	}else if(tmp.equals("关灯")){
             			//MyClientDemo.sendCmdByTCP(VoiceRecognition.this,cmd,"OK");
-            		MyClientDemo.state = 0;
+            		HomeClientDemo.state = 0;
             		if(client!=null)
             			client.clientSendCommand(TCPClient.CLIENT_COMMAND_SETSENSOR);
             	}else{

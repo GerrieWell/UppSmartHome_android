@@ -8,7 +8,7 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 
-import org.lxh.demo.MyClientDemo.MessageHandler;
+import org.lxh.demo.HomeClientDemo.MessageHandler;
 
 import zigbeeNet.NwkDesp;
 

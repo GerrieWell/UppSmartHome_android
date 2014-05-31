@@ -46,8 +46,14 @@ public class HelpUtils {
 	  * @param b 字节数组
 	  * @return 生成的int数据
 	  */
-	 public static long bytesToLong(byte[] b){
-	  return (((long)b[3]) << 24) + (((long)b[2]) << 16) + (((long)b[1]) << 8) + b[0];
+	 public static long bytesToLong(byte[] bytes){
+	  //return (((long)b[3]) << 24) + (((long)b[2]) << 16) + (((long)b[1]) << 8) + b[0];
+         long addr=0;  
+         addr = bytes[3] & 0xFF;  
+         addr = (addr << 8) | (bytes[2] & 0xff) ;  
+         addr = (addr << 8) | (bytes[1] & 0xff) ;  
+         addr = (addr << 8) | (bytes[0] & 0xff) ;  
+         return addr;  
 	 }
 	 public static long bytesToLong2(byte[] b){
 		  return ((((long)b[0]) << 24)&0xff000000) 

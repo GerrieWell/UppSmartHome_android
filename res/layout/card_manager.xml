@@ -29,6 +29,11 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="挂失" />
+    	<Button
+            android:id="@+id/button_door"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="开门" />
     </LinearLayout>
 
 </LinearLayout>

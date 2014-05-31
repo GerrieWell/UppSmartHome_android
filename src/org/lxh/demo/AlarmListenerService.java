@@ -98,7 +98,7 @@ public class AlarmListenerService extends Service {
 		notification.audioStreamType= android.media.AudioManager.ADJUST_LOWER;
 	// 点击状态栏的图标出现的提示信息设置
 		//notification.setLatestEventInfo(this.context, c.getContent()+" ","  ", pendingIntent);
-		Intent intent = new Intent(AlarmListenerService.this, MyClientDemo.class);
+		Intent intent = new Intent(AlarmListenerService.this, HomeClientDemo.class);
 		PendingIntent pendIntent = PendingIntent.getActivity(AlarmListenerService.this, 0, intent, 0);  
 		//notification.contentIntent = notificationIntent;
 		notification.setLatestEventInfo(AlarmListenerService.this, "SMARTHOME 提醒您:", str, pendIntent);
@@ -119,8 +119,8 @@ public class AlarmListenerService extends Service {
 				return ;
 			}
 			System.out.println("readly to connet");
-			qtClient = new Socket(MyClientDemo.IP, MyClientDemo.qtPORT);				// 指定服务器
-			SocketAddress socAddress = new InetSocketAddress(MyClientDemo.IP,MyClientDemo.qtPORT); 
+			qtClient = new Socket(HomeClientDemo.IP, HomeClientDemo.qtPORT);				// 指定服务器
+			SocketAddress socAddress = new InetSocketAddress(HomeClientDemo.IP,HomeClientDemo.qtPORT); 
 			//qtClient.connect(socAddress, 5000);
 			
 			System.out.println("create Socket success");
@@ -186,7 +186,7 @@ public class AlarmListenerService extends Service {
 				return null;
 			}
 				try {
-					System.out.println("Current line:"+MyClientDemo.getLineNumber(new Exception()));
+					System.out.println("Current line:"+HomeClientDemo.getLineNumber(new Exception()));
 					if(!file.exists())
 						file.createNewFile();
 					fos=new FileOutputStream(file);
@@ -260,10 +260,10 @@ public class AlarmListenerService extends Service {
 			//mutexEnble=true;
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
-			MyClientDemo.getLineNumber(new Exception());
+			HomeClientDemo.getLineNumber(new Exception());
 			e.printStackTrace();
 		}
-		MyClientDemo.getLineNumber(new Exception());
+		HomeClientDemo.getLineNumber(new Exception());
 		FLAG_READ_PIC_COMPLETE = true;
 		//temp = null;
 		

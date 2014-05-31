@@ -235,7 +235,7 @@ public class TCPClient implements Serializable{
 		}
 		@Override
 		public void run() {
-			MyClientDemo.getLineNumber(new Exception());
+			HomeClientDemo.getLineNumber(new Exception());
 			Looper.prepare();
 			mSendHandler = new Handler(){
 	            public void handleMessage(Message msg) {
@@ -253,27 +253,20 @@ public class TCPClient implements Serializable{
 	            		long[] tmp = new long[num+2];
 	            		tmp[0]= 0x15L;
 	            		tmp[]*/
-	            		try {
-							writeLong(command);
-						} catch (IOException e) {
-							// TODO Auto-generated catch block
-							e.printStackTrace();
-						}
+						writeLong(command);
+
 	            		return ;
 	            	}
 	            	
 	            	long command = ((Long) msg.obj).longValue();
 	        		long tmp[] = {0x15,command,0x0a};
 	        		if(command == CLIENT_COMMAND_SETSENSOR){
-	        			tmp = new long[]{ 0x15,0x03,MyClientDemo.addr,MyClientDemo.state,0x0a};
+	        			tmp = new long[]{ 0x15,0x03,HomeClientDemo.addr,HomeClientDemo.state,0x0a};
 	        		}
-	        		try {
+	        		
 	        			writeLong(tmp);
-	        		} catch (IOException e) {
-	        			e.printStackTrace();
-	        		}
 	            }
-	        	public void writeLong(long[] txLong) throws IOException{
+	        	public void writeLong(long[] txLong){
 	        		byte tx[],tmp[];
 	        		long rxArr[] = new long[256];
 	        		//String rxStrBuf = null;
@@ -283,13 +276,21 @@ public class TCPClient implements Serializable{
 	        			tmp = HelpUtils.longToBytes(txLong[i]);
 	        			System.arraycopy(tmp, 0, tx, i*4, 4);
 	        		}
-	        		clientInner.write(tx, 0, tx.length);
+	        		try {
+						clientInner.write(tx, 0, tx.length);
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						TCPClient tcpClient = TCPClient.this;
+						tcpClient.close();
+						tcpClient = null;
+						e.printStackTrace();
+					}
 	        	}
 			};
 			//Run the message queue in this thread. Be sure to call quit() to end the loop.
 			//loop 后面的代码不会执行
 			Looper.loop();
-			MyClientDemo.getLineNumber(new Exception());
+			HomeClientDemo.getLineNumber(new Exception());
 		}
 		
 	}
@@ -345,7 +346,7 @@ public class TCPClient implements Serializable{
 							rxLongs = new long[buffer.limit()/4];
 							for(int i=0;i<buffer.limit()/4;i++){
 								System.arraycopy(rx, i*4, rxTmp, 0, 4);
-								rxLongs[i] = HelpUtils.bytesToLong(rxTmp); 
+								rxLongs[i] = HelpUtils.bytesToLong(rxTmp)&0xffffffffL; 
 								//System.out.println("long rx :" + rxLongs[i] + "\ti = "+ i);
 							}
 							// 控制台打印出来
@@ -416,6 +417,9 @@ public class TCPClient implements Serializable{
                 case 0x08:
                 case 0x09:
                 	//Client_GetRealPic(rxLong);//Ready to get Real Pic.
+                case 0xff:
+                	Cliect_ZigBeeFeedback_Process(rxLong);
+                	break;
                 default:
                         System.out.println(("error COMMAND\n"));
                         break;
@@ -473,7 +477,7 @@ public class TCPClient implements Serializable{
 				firstNodeInfo.devinfo	  		= firstDevInfo;
 				nodeInfos.add(firstNodeInfo);//firstNodeInfo.next = null;
 /*果然错了 处理应该放在接受线程，ui主线程仅仅负责更新ui！ （虽然一个个控件加到handler麻烦了点，但是可以封装一个类出来）*/
-				if(firstDevInfo.sensortype == MyClientDemo.SENSORTYPE_RF||firstDevInfo.sensortype == MyClientDemo.SENSORTYPE_SMOG){
+				if(firstDevInfo.sensortype == HomeClientDemo.SENSORTYPE_RF||firstDevInfo.sensortype == HomeClientDemo.SENSORTYPE_SMOG){
 					if(firstDevInfo.sensorvalue >= 1)
 		System.out.println("clear interrupt");
 						TCPClient.this.clientSendCommand(TCPClient.CLIENT_COMMAND_CLEARINT);
@@ -501,7 +505,7 @@ System.out.println("sensorvalue is :"+ node[13+18*i]);
 //System.out.println("get node : "+ newNodeInfo.num);
 					newNodeInfo.devinfo	  = devInfo;
 					nodeInfos.add(newNodeInfo);//newNodeInfo.next = null;
-					if(devInfo.sensortype == MyClientDemo.SENSORTYPE_RF||devInfo.sensortype == MyClientDemo.SENSORTYPE_SMOG){
+					if(devInfo.sensortype == HomeClientDemo.SENSORTYPE_RF||devInfo.sensortype == HomeClientDemo.SENSORTYPE_SMOG){
 						if(devInfo.sensorvalue >= 1)
 			System.out.println("clear interrupt");
 							TCPClient.this.clientSendCommand(TCPClient.CLIENT_COMMAND_CLEARINT);
@@ -514,7 +518,7 @@ System.out.println("sensorvalue is :"+ node[13+18*i]);
 			//				onDestory 时 UIhandler =null;
 	        if(UIhandler!=null){
 		        Message childMsg = UIhandler.obtainMessage();
-		        childMsg.arg1 = MyClientDemo.UI_MESG_UPDATE_TOPO;
+		        childMsg.arg1 = HomeClientDemo.UI_MESG_UPDATE_TOPO;
 System.out.println("nodes num is "+ nodeInfos.size());
 		        childMsg.obj = nodeInfos;//show;
 	        	UIhandler.sendMessage(childMsg);
@@ -532,6 +536,33 @@ System.out.println("nodes num is "+ nodeInfos.size());
 		    pNwkDesp2.maxdepth=nwkinfo[4];
 		    pNwkDesp2.maxrouter=nwkinfo[5];
 		}
+		public static final long ERROR_ID_NOT_EXIST = 0x1001L;
+		public static final long ERROR_ID_REGISTERED = 0x1002L;
+		
+		private void Cliect_ZigBeeFeedback_Process(long[] err)
+		{
+			long errorCode = err[0];
+			String toastShow = null;
+			Message childMsg = null;
+	        if(UIhandler!=null){
+	        	childMsg = UIhandler.obtainMessage();
+		        childMsg.arg1 = HomeClientDemo.UI_MESG_ERROR;
+	        }else 
+	        	return;
+		    if(errorCode==0L){
+		    	//Toast.makeText()
+		    	System.out.println("err:"+err[0]);
+
+		        childMsg.obj = "成功！";//show;
+		    }else if(errorCode==ERROR_ID_NOT_EXIST){
+		    	System.out.println("err:"+err[0]);
+		    	childMsg.obj = "未知id卡！";//show;
+		    }else if(errorCode == ERROR_ID_REGISTERED)
+		    	childMsg.obj = "此卡已注册过！";
+
+        	UIhandler.sendMessage(childMsg);
+		}
+		
 		
 		private void Cliect_TempHum_Process(long[] rxLong) {
 			// TODO Auto-generated method stub
