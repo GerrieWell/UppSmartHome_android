@@ -60,11 +60,7 @@ public class HomeClientDemo extends Activity {
 	private Button butReg,butLogout,butDoor;
 	private EditText etAlias;
 	private TextView smInfoText;
-	private Spinner wiRingSpin = null,lightGroups=null;/*
-	private ArrayAdapter<String> adapter,lightAdapter,eventAdapter;
-	public static final String[] wir_str_temp={"电器A","电器B","电器C","电器D","电器E","电器F","点击开关电器"};
-	private static final String[] wirings={"电器A","电器B","电器C","电器D","电器E","电器F","点击开关电器"};
-	private static final String[] light_str={"灯光组A","灯光组B"};*/
+	private Spinner wiRingSpin = null,lightGroups=null;
 	private static final String[] sw={"(关闭)","(打开)"};
 /*	public static final byte CATE_GATE=(byte) 0xa2,CATE_LIGHT=(byte) 0xa1,CATE_EF=(byte)0xef
 			,CATE_EE=(byte) 0xee,CATE_ED=(byte)0xeb,FLAG_REMOTE_STATE_CATE_TODO=(byte)0xb0;*/
@@ -193,8 +189,6 @@ public class HomeClientDemo extends Activity {
 				alarmWin.showAtLocation(button_lights, Gravity.CENTER, 0, 0);				
 				alarmSW=(ToggleButton) alarmView.findViewById(R.id.alarmtoggle);
 				event_wiring=(Spinner) alarmView.findViewById(R.id.event_wiring_spinner);
-				
-				
 				alarmSW.setOnCheckedChangeListener(new OnCheckedChangeListener() {
 					
 					@Override

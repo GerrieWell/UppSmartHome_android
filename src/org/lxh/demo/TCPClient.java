@@ -507,8 +507,8 @@ System.out.println("sensorvalue is :"+ node[13+18*i]);
 					nodeInfos.add(newNodeInfo);//newNodeInfo.next = null;
 					if(devInfo.sensortype == HomeClientDemo.SENSORTYPE_RF||devInfo.sensortype == HomeClientDemo.SENSORTYPE_SMOG){
 						if(devInfo.sensorvalue >= 1)
-			System.out.println("clear interrupt");
 							TCPClient.this.clientSendCommand(TCPClient.CLIENT_COMMAND_CLEARINT);
+						System.out.println("clear interrupt");
 					}
 				}
 			}
