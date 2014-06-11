@@ -83,12 +83,13 @@ public class HomeClientDemo extends Activity {
 	public final static String SER_KEY	 = "com.lxh.demo.ser";
 	public final static String SER_STATE = "com.lxh.demo.STATE";
 	public final static String SER_ADDR  = "com.lxh.demo.ADDR";
-
+	
 /*tools*/
 	Calendar calendar;
 	public Handler messageHandler;
 	public static boolean secureSW = false;
 	public static boolean doorTipsSW = false;
+	public static boolean g_CLIENT_SEND_PAUSE_FLAG = false;
 /* views */
 	//private boolean con_staus=false,outMode=false;
 	
@@ -128,8 +129,11 @@ public class HomeClientDemo extends Activity {
 		this.info = (TextView) super.findViewById(R.id.info);			// 取得组件
 		textTemp = (TextView)super.findViewById(R.id.text_temp);
 		textHumi = (TextView)super.findViewById(R.id.text_humi);
+		textHumi.setTextColor(Color.BLACK);
+		textHumi.setText(" ");
 		smInfoText=(TextView)findViewById(R.id.home_state);				//将可选内容与ArrayAdapter连接
 		smInfoText.setTextColor(Color.BLACK);
+		//smInfoText.setBackgroundColor(Color.WHITE);
 		realPic=(Button)findViewById(R.id.real_time_pic);
 		//mp=new monitorPicListener();
 		
@@ -251,7 +255,7 @@ public class HomeClientDemo extends Activity {
 						Intent intent = new Intent(HomeClientDemo.this,AlarmReceiver.class);
 						intent.putExtra("electric", ((CheckBox)alarmView.findViewById(R.id.event_wiring)).isChecked());
 						intent.putExtra("electric_num", event_wiring.getSelectedItemPosition());
-						lightStates[0]&=(~((1<<3)&0xff));
+						/*lightStates[0]&=(~((1<<3)&0xff));
 						if(((CheckBox)alarmView.findViewById(R.id.lights_event)).isChecked()){
 							//@假设台灯在 0组 第3个.
 							//在android中已经设为打开..
@@ -261,7 +265,7 @@ public class HomeClientDemo extends Activity {
 							intent.putExtra("openLight", true);
 						}else{
 							intent.putExtra("openLight", false);
-						}
+						}*/
 						intent.putExtra("room_light",lightStates[0]);
 						PendingIntent pendingIntent = PendingIntent.getBroadcast(HomeClientDemo.this, 0, intent, 0);
 						//获取闹钟管理器
@@ -433,8 +437,10 @@ public class HomeClientDemo extends Activity {
 		}
 		HomeClientDemo.state = a;
 		System.out.println("a is "+ Integer.toBinaryString(a));
+		//g_CLIENT_SEND_PAUSE_FLAG = true;
 		if(client!=null)
 			client.clientSendCommand(TCPClient.CLIENT_COMMAND_SETSENSOR);
+		g_CLIENT_SEND_PAUSE_FLAG = true;
 	}
 
 	private boolean savePerformance(long uid,String alias){
@@ -534,6 +540,10 @@ public class HomeClientDemo extends Activity {
 									client.clientSendCommand(TCPClient.CLIENT_COMMAND_GETNWKINFO);
 									while(client!=null){
 										if(client!=null){
+											if(g_CLIENT_SEND_PAUSE_FLAG){
+												Thread.sleep(1500);
+												g_CLIENT_SEND_PAUSE_FLAG = false;
+											}
 											client.clientSendCommand(TCPClient.CLIENT_COMMAND_GETNWKINFO);
 											//client.clientSendCommand(TCPClient.CLIENT_COMMAND_CLEARINT);
 										}
@@ -633,6 +643,11 @@ public class HomeClientDemo extends Activity {
         		nb.setContentText((String)msg.obj);
         		notification = nb.getNotification();
         		manager.notify(1, notification);
+        	case UI_MESG_ERROR:
+        		getLineNumber(new Exception());
+        		nb.setContentText((String)msg.obj);
+        		notification = nb.getNotification();
+        		manager.notify(1, notification);
         		break;
         	
         	}
@@ -687,7 +702,8 @@ System.out.println("LINE 455 \t # di.sensorvalue"+ di.sensorvalue);
 				
 				System.out.println("pins value is "+ Long.toHexString(di.sensorvalue));
 				addr = di.nwkaddr;
-				int temp = (int) (di.sensorvalue & 0x0000000000ff0000)>>16;
+				//int temp = (int) (di.sensorvalue & 0x0000000000ff0000)>>16;
+				int temp = (int) (di.sensorvalue & 0x00000000000000ff);
 				show = show + new String("pin:"+"0x"+Long.toHexString(temp));
 System.out.println("temp : "+ Integer.toHexString(temp).toString());
 				for(int i=0;i<8;i++){		
@@ -701,11 +717,11 @@ System.out.println("temp : "+ Integer.toHexString(temp).toString());
 					temp >>>= 1;
 				}
 			}else if(di.sensortype == SENSORTYPE_RFID){
-				gRegisteredID = di.sensorvalue;
 				System.out.println("gRegisteredID is "+gRegisteredID+ " sesorvalue"+di.sensorvalue);
 				if(REGISTERING_FLAG){/*@wei_reg2*/
+					gRegisteredID = di.sensorvalue;
 					if(gRegisteredID!=0){
-						Toast.makeText(HomeClientDemo.this, "新卡注册成功,填写别名后保存.",Toast.LENGTH_SHORT).show();
+						Toast.makeText(HomeClientDemo.this, "新卡注册成功.",Toast.LENGTH_SHORT).show();
 						savePerformance(di.sensorvalue, etAlias.getText().toString());
 						REGISTERING_FLAG = false;
 					}else

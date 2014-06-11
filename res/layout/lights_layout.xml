@@ -37,7 +37,6 @@
                     android:layout_height="wrap_content"
                     android:text="灯光0"
                     android:textAppearance="?android:attr/textAppearanceMedium" />
-
                 <ToggleButton
                     android:id="@+id/toggleButton1"
                     android:layout_width="wrap_content"
@@ -147,7 +146,7 @@
                     android:id="@+id/textView8"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="继电器6"
+                    android:text="灯光6"
                     android:textAppearance="?android:attr/textAppearanceMedium" />
 
                 <ToggleButton
@@ -164,7 +163,7 @@
                     android:id="@+id/textView9"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="电磁阀7"
+                    android:text="灯光7"
                     android:textAppearance="?android:attr/textAppearanceMedium" />
 
                 <ToggleButton

@@ -406,14 +406,6 @@ public class TCPClient implements Serializable{
                         //printf("COMMAND:-------GetTempHum--------:\n");
                         Cliect_TempHum_Process(rxLong);
                         break;
-                case 0x06:
-                        //printf("COMMAND:-------GetSendMsg--------:\n");
-                        //Cliect_GPRSSend_Process(buffer[2]);
-                        break;
-                case 0x07:
-                        //printf("COMMAND:-------get GPRSSignal--------:\n");
-                        //Cliect_GPRSSignal_Process(buffer[2]);
-                        break;
                 case 0x08:
                 case 0x09:
                 	//Client_GetRealPic(rxLong);//Ready to get Real Pic.
@@ -478,9 +470,9 @@ public class TCPClient implements Serializable{
 				nodeInfos.add(firstNodeInfo);//firstNodeInfo.next = null;
 /*果然错了 处理应该放在接受线程，ui主线程仅仅负责更新ui！ （虽然一个个控件加到handler麻烦了点，但是可以封装一个类出来）*/
 				if(firstDevInfo.sensortype == HomeClientDemo.SENSORTYPE_RF||firstDevInfo.sensortype == HomeClientDemo.SENSORTYPE_SMOG){
-					if(firstDevInfo.sensorvalue >= 1)
-		System.out.println("clear interrupt");
-						TCPClient.this.clientSendCommand(TCPClient.CLIENT_COMMAND_CLEARINT);
+					//if(firstDevInfo.sensorvalue >= 1)
+					//	System.out.println("clear interrupt");
+					//	TCPClient.this.clientSendCommand(TCPClient.CLIENT_COMMAND_CLEARINT);
 				}
 				
 				//为什么要 -3
@@ -549,14 +541,14 @@ System.out.println("nodes num is "+ nodeInfos.size());
 		        childMsg.arg1 = HomeClientDemo.UI_MESG_ERROR;
 	        }else 
 	        	return;
+	        System.out.println("errorCode number"+errorCode);
 		    if(errorCode==0L){
 		    	//Toast.makeText()
 		    	System.out.println("err:"+err[0]);
-
 		        childMsg.obj = "成功！";//show;
 		    }else if(errorCode==ERROR_ID_NOT_EXIST){
 		    	System.out.println("err:"+err[0]);
-		    	childMsg.obj = "未知id卡！";//show;
+		    	childMsg.obj = "未知id卡正在试图开门！";//show;
 		    }else if(errorCode == ERROR_ID_REGISTERED)
 		    	childMsg.obj = "此卡已注册过！";
 

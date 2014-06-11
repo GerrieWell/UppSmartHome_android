@@ -30,6 +30,7 @@
 
         <LinearLayout
             android:layout_width="match_parent"
+            android:gravity="center_horizontal"
             android:layout_height="wrap_content" >
 
             <Button
@@ -38,11 +39,12 @@
                 android:layout_height="wrap_content"
                 android:text="语音识别" />
 
-            <Button
+             <Button
                 android:id="@+id/button_alarm"
                 android:layout_width="98dp"
                 android:layout_height="wrap_content"
-                android:text="定时事件" />
+                android:visibility="invisible"
+                android:text="定时事件" /> 
 
             <Button
                 android:id="@+id/button_lights"
@@ -94,11 +96,14 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="0.03" >
+            android:orientation="horizontal"
+            android:gravity="center"
+             >
 
             <LinearLayout
                 android:layout_width="160dp"
                 android:layout_height="match_parent"
+                android:gravity="center_vertical"
                 android:orientation="vertical" >
 
                 <Button
@@ -117,6 +122,7 @@
             <LinearLayout
                 android:layout_width="160dp"
                 android:layout_height="match_parent"
+                android:gravity="center_vertical"
                 android:orientation="vertical" >
 
                 <Button
@@ -129,6 +135,7 @@
                     android:id="@+id/real_time_pic"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:layout_marginRight="0dp"
                     android:text="实时图片" />
 
 

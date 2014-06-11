@@ -140,6 +140,8 @@ public class AlarmListenerService extends Service {
 	}
 	
 	public static void closeQtServer(){
+		if(!isConnectedTCP())
+			return;
 		try {
 			shOut.close();
 			shBuf.close();
@@ -284,7 +286,7 @@ public class AlarmListenerService extends Service {
 	 
 	 
 	public static boolean isConnectedTCP(){
-		return (qtClient!=null&&qtClient.isConnected()&&qtClient.isClosed());
+		return (qtClient!=null&&qtClient.isConnected()&&!qtClient.isClosed());
 	}
 	
 
